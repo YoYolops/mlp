@@ -68,5 +68,6 @@ fn render_image(image: &[u8], mode: char) {
 }
 ```
 
-Now we are able to see them on terminal:
+Now we are able to see them on terminal (the green background is my terminal's background):
 
+![Captura de tela de 2025-05-17 02-00-20](https://github.com/user-attachments/assets/d696e2ee-85aa-49e1-9b24-a8368f278885)
