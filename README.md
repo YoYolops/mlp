@@ -106,6 +106,10 @@ impl MLP {
 I chose f64 numbers to have a nice precision, although having a feeling that this is overkill. I am also concerned about potencial performance issues with those 64bits number all over the neurons, weights and biases, but will see how it goes...
 
 ### Building connections
-According to my **source**, the connections between neurons are, internally, simply a number that defines how strongly related they are. Since each neuron from a layer connects with all the ones in the next, we are going to have a lot of those f64 numbers flying aroung. (784x16) + (16x16) + (16*10) = 12960 weight values (with more from neurons themselves) 
+According to my **source**, the connections between neurons are, internally, simply a number that defines how strongly related they are. Since each neuron from a layer connects with all the ones in the next, we are going to have a lot of those f64 numbers flying aroung. (784x16) + (16x16) + (16*10) = 12960 weight values just between the first two layers (with more from neurons themselves) 
 As recommended, we are going to represent them in a single matrix: `weights_matrix: [[f64; 784]; 16]`
 
+### Randomizing Weights
+The first thing we need to do is randomize the weights matrix. Currently they're all set to zero, which results in dead activation between all conections. A dead brain, so to speak, since all the operations would result in zeros. Unfortunately, rust does not provide a randomizer solution, so we're going to use an external crate, called rand.
+
+We also create a print function, so here it is one of our weights matrix:

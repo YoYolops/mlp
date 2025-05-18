@@ -3,8 +3,10 @@ mod mlp;
 
 use crate::mlp::MLP;
 
-fn main() -> std::io::Result<()> {
-    let mlp = MLP::new();
+fn main() {
+    let mut mlp = MLP::new();
     mlp.load_weights();
-    io::read_image()
+    mlp.show_weights();
+    mlp.randomize_weights();
+    mlp.show_weights();
 }
