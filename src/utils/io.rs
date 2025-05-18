@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{self, BufReader, Read};
 
-pub fn read_image() -> io::Result<()> {
+pub fn read_image() -> io::Result<[u8; 784]> {
     let file = File::open("./data/train-images.idx3-ubyte")?;
     let mut reader = BufReader::new(file);
 
@@ -16,17 +16,14 @@ pub fn read_image() -> io::Result<()> {
 
     println!("Images: {}, Size: {}x{}", num_images, num_rows, num_cols);
 
-    let image_size = (num_rows * num_cols) as usize;
-
+    let mut image = [0u8; 784];
     for i in 0..num_images {
-        let mut image = [0u8; 784];
         println!("Reading image: {}", i+1);
-
         reader.read_exact(&mut image)?;
         render_image(&image, 'p');
     }
 
-    Ok(())
+    Ok(image)
 }
 
 // Helper to read a u32 in big-endian format

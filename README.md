@@ -157,3 +157,20 @@ pub fn normalize_image(image: [u8; 784]) -> [f64; 784] {
 ### Early Performance Concern
 I'm not sure if this perceptron will be that hard to process, since it is very simple. But even this simple perceptron will require millions, maybe billions of matrices operations. I could implement methods for those operations myself, but i will use a library instead, who implements performance improvements in those kinds of operations, potencially reducing training time. After a couple of minutes i've just adapted a few files to make use of our new library instead of pure arrays to store matrices.
 
+### Our Perceptron's First Toughts
+With all of our neurons and connections setup. Functions to read, normalize and feed the dataset to the input layer, and all the matrices operations setup, our perceptron is finally able to see and (try to) classify images, despite being really dump right now. Also, a few normalizing operations are still missing, so we can't quite extract any kind of reason from its outputs (yet).
+
+In addittion to that, we are still missing a lot of training functions and related features to support this process. I'll be handling this very soon.
+
+As discussed before, while we were creating the function to initialize the weights matrices with random numbers, if our perceptron starts its weights as zeros, the output will always be a vector of zeros:
+
+```rust
+// Output Neurons
+[[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+```
+
+After randomizing our weights:
+```rust
+[[2.832064153297856, -7.189384950817572, 29.26444281394776, 38.91743873415687, -15.684375189411712, -11.421555730798271, -3.4437869072569565, -20.747108787807665, 5.599649623093166, -9.700232613382788]]
+```
+
