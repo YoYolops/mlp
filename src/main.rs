@@ -1,4 +1,3 @@
-mod io;
 mod mlp;
 
 use crate::mlp::MLP;

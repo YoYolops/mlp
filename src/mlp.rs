@@ -1,75 +1,86 @@
 use rand::Rng;
+use nalgebra::{DMatrix, DVector};
 
 pub struct MLP {
-    input_layer: [f64; 784],
-    hidden_layer_0: [f64; 16],
-    hidden_layer_1: [f64; 16],
-    output_layer: [f64; 10],
-    weights_matrix_01: [[f64; 784]; 16],
-    weights_matrix_12: [[f64; 16]; 16],
-    weights_matrix_23: [[f64; 16]; 10]
+    input_layer: DVector<f64>,         // 784 x 1
+    hidden_layer_0: DVector<f64>,      // 16 x 1
+    hidden_layer_1: DVector<f64>,      // 16 x 1
+    output_layer: DVector<f64>,        // 10 x 1
+    weights_matrix_01: DMatrix<f64>,   // 16 x 784
+    weights_matrix_12: DMatrix<f64>,   // 16 x 16
+    weights_matrix_23: DMatrix<f64>,   // 10 x 16
 }
 
 impl MLP {
 
     pub fn new() -> Self {
         MLP {
-            input_layer: [0.0; 784],
-            hidden_layer_0: [0.0; 16],
-            hidden_layer_1: [0.0; 16],
-            output_layer: [0.0; 10],
-            weights_matrix_01: [[0.0; 784]; 16],
-            weights_matrix_12: [[0.0; 16]; 16],
-            weights_matrix_23: [[0.0; 16]; 10]
+            input_layer: DVector::from_element(784, 0.0),
+            hidden_layer_0: DVector::from_element(16, 0.0),
+            hidden_layer_1: DVector::from_element(16, 0.0),
+            output_layer: DVector::from_element(10, 0.0),
+            weights_matrix_01: DMatrix::from_element(16, 784, 0.0),
+            weights_matrix_12: DMatrix::from_element(16, 16, 0.0),
+            weights_matrix_23: DMatrix::from_element(10, 16, 0.0),
         }
     }
 
     pub fn randomize_weights(&mut self) {
         let mut rng = rand::rng();
-        
-        for row in self.weights_matrix_01.iter_mut() {
-            for weight in row.iter_mut() {
-                *weight = rng.random_range(-1.0..1.0);
+
+        // Iterate through each weight matrix and assign random values
+        for i in 0..self.weights_matrix_01.nrows() {
+            for j in 0..self.weights_matrix_01.ncols() {
+                self.weights_matrix_01[(i, j)] = rng.random_range(-1.0..1.0);
             }
         }
 
-        for row in self.weights_matrix_12.iter_mut() {
-            for weight in row.iter_mut() {
-                *weight = rng.random_range(-1.0..1.0);
+        for i in 0..self.weights_matrix_12.nrows() {
+            for j in 0..self.weights_matrix_12.ncols() {
+                self.weights_matrix_12[(i, j)] = rng.random_range(-1.0..1.0);
             }
         }
 
-        for row in self.weights_matrix_23.iter_mut() {
-            for weight in row.iter_mut() {
-                *weight = rng.random_range(-1.0..1.0);
+        for i in 0..self.weights_matrix_23.nrows() {
+            for j in 0..self.weights_matrix_23.ncols() {
+                self.weights_matrix_23[(i, j)] = rng.random_range(-1.0..1.0);
             }
         }
     }
 
     pub fn show_weights(&self) {
         println!("Weights Between Layers 0 & 1:");
-        for row in self.weights_matrix_01 {
-            for val in row {
-                print!("{:>4.1}", val);
+        for row in self.weights_matrix_01.row_iter() {
+            for val in row.iter() {
+                print!("{:>6.1}", val);
             }
             println!();
         }
 
         println!("Weights Between Layers 1 & 2:");
-        for row in self.weights_matrix_12 {
-            for val in row {
+        for row in self.weights_matrix_12.row_iter() {
+            for val in row.iter() {
                 print!("{:>6.1}", val);
             }
             println!();
         }
 
         println!("Weights Between Layers 2 & 3:");
-        for row in self.weights_matrix_23 {
-            for val in row {
+        for row in self.weights_matrix_23.row_iter() {
+            for val in row.iter() {
                 print!("{:>6.1}", val);
             }
             println!();
         }
+    }
+
+    pub fn predict(&mut self, image: [f64; 784]) {
+        // Fill the first layer with image data
+        // self.input_layer = image;
+
+        // multiply input layer vector by 01 weights matrix
+
+        // 
     }
 
     pub fn load_weights(&self) {

@@ -113,3 +113,47 @@ As recommended, we are going to represent them in a single matrix: `weights_matr
 The first thing we need to do is randomize the weights matrix. Currently they're all set to zero, which results in dead activation between all conections. A dead brain, so to speak, since all the operations would result in zeros. Unfortunately, rust does not provide a randomizer solution, so we're going to use an external crate, called rand.
 
 We also create a print function, so here it is one of our weights matrix:
+
+```rust
+Weights Between Layers 1 & 2:
+   0.4   0.6  -0.9  -0.9   0.5  -0.7   0.1  -0.1  -0.8   0.7  -0.1   0.0   0.7  -0.0   0.1  -0.4
+  -0.3   0.4  -0.5   0.9   0.1   0.3  -0.6  -0.9   0.8   0.8   0.7   0.7  -0.4  -1.0   0.2   0.6
+   0.5  -0.8   0.0   0.6   0.6  -0.9  -0.7  -0.9   0.4   0.2   0.7  -1.0  -0.4  -0.3   0.8   0.5
+   0.2   0.8  -0.7  -0.0  -0.5   0.7  -0.2   0.3   0.6  -0.6  -0.9  -0.3  -0.2  -0.1  -0.7  -0.1
+  -0.6   0.5  -0.7  -0.6   0.6   0.6   0.4   0.6  -0.1   0.5  -0.2   0.8   0.6  -0.1  -0.4   0.1
+   0.3   0.9  -0.2   0.0  -0.0   0.5   0.7  -0.5   0.2  -0.9   0.9  -0.0  -1.0   0.7   0.5  -0.3
+  -0.0   0.4  -0.8   0.4  -0.1   0.8  -0.4   0.1   0.6   0.3  -0.0  -0.1  -0.5  -0.0   0.7   0.2
+  -0.7   0.6   1.0   0.9   0.8   0.0  -0.6   0.1  -0.9  -0.8   0.6  -0.8  -0.4  -0.7  -0.7  -0.4
+   0.7   0.3   0.6   0.7  -0.8  -0.7  -0.8   0.1   0.8  -0.8  -0.9  -0.6   0.4  -0.6  -0.8   0.4
+   0.3  -0.8  -0.1  -0.6   1.0  -0.8  -0.2  -0.6   0.3  -0.3  -0.5  -0.9  -0.6   0.5  -0.5  -0.2
+   0.6  -0.6   0.1   0.8   0.1  -0.6   0.2  -0.5   0.8  -0.8  -0.9   0.9  -0.4   0.8  -0.0   0.2
+   0.8   0.9  -0.1   0.8   0.7   0.2   0.7   0.7  -0.3  -0.7  -0.7   0.1  -0.6   0.1   0.3   0.5
+  -0.6   0.1  -0.9  -0.3   0.1   1.0   0.3  -0.8   0.1  -0.0  -0.5   0.5  -1.0   0.2   0.9   0.3
+  -0.6   0.5   0.3  -0.3   0.8   0.4   0.2   0.9   0.3   0.5   0.2  -0.4   0.4   0.7  -0.6  -0.8
+  -0.7   1.0  -0.8   0.7   0.1   0.2  -0.4   0.9   0.8  -0.4  -0.6  -0.3  -0.8   0.1   0.3  -0.4
+  -0.3   0.3   0.5  -0.1  -0.8   0.8  -0.3  -0.1  -1.0  -0.6   0.8   0.0  -1.0  -0.1   0.3   1.0
+```
+
+### Perceptron Reborn
+As of now, our baby perceptron is, at a structural level, entirely built! We already have all the neurons and connections set up. The next step is to create a couple of things to make it functional, eg. the activation function, feed foward etc. Before that, we need to go back to our `io.rs` module. 
+
+### The Feeding Data Problem (Or making the perceptron see)
+The entire purpose of our first perceptron layer is to represent the image it's currently being analyzed (or looked at), hence the layer size being tightly linked to the image's. Here we have a mismatch. Each neuron receives data from a pixel, which is encoded in a 8bit number, ranging from 0-255. But a neuron will only hold values between 0 and 1. We need a way of maping those pixels values to something that can be represented inside our neurons.
+
+Since values between 0 and 1 can be understood as a percentage, and a pixel is always in between the concepts of entirely lit (at its brightest, 100%) and entirely dimmed (at its darkest, 0%), we can obtain the percentage of how much bright each pixel has by simply dividing its value to 255. Now we have a normalizing function:
+
+```rust
+pub fn normalize_image(image: [u8; 784]) -> [f64; 784] {
+    let mut normalized_image: [f64; 784] = [0.0; 784];
+
+    for (i, &pixel_byte) in image.iter().enumerate() {
+        normalized_image[i] = pixel_byte as f64 / 255.0;
+    }
+    
+    normalized_image
+}
+```
+
+### Early Performance Concern
+I'm not sure if this perceptron will be that hard to process, since it is very simple. But even this simple perceptron will require millions, maybe billions of matrices operations. I could implement methods for those operations myself, but i will use a library instead, who implements performance improvements in those kinds of operations, potencially reducing training time. After a couple of minutes i've just adapted a few files to make use of our new library instead of pure arrays to store matrices.
+

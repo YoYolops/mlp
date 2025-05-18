@@ -19,7 +19,7 @@ pub fn read_image() -> io::Result<()> {
     let image_size = (num_rows * num_cols) as usize;
 
     for i in 0..num_images {
-        let mut image = vec![0u8; image_size];
+        let mut image = [0u8; 784];
         println!("Reading image: {}", i+1);
 
         reader.read_exact(&mut image)?;
