@@ -174,3 +174,73 @@ After randomizing our weights:
 [[2.832064153297856, -7.189384950817572, 29.26444281394776, 38.91743873415687, -15.684375189411712, -11.421555730798271, -3.4437869072569565, -20.747108787807665, 5.599649623093166, -9.700232613382788]]
 ```
 
+### The Softmax Ending
+We had to create a softmax function to turn the output values in a probability table and finish or model 'structurewise'. It kind of worked pretty well. We're now in a very important step, because the only thing separating us from absolute success is figuring out how to train it. Right know it is only randomly guessing the output.
+
+Have a look at our prediction function:
+```rust
+    fn apply_relu<const N: usize>(layer: &mut SVector<f64, N>) {
+        for val in layer.iter_mut() {
+            *val = val.max(0.0);
+        }
+    }
+
+    fn apply_softmax<const N: usize>(layer: &SVector<f64, N>) -> SVector<f64, N> {
+        let max_val = layer.max(); // for numerical stability
+        let exps = layer.map(|x| (x - max_val).exp());
+        let sum: f64 = exps.iter().sum();
+        exps / sum
+    }
+
+    // It is good the image is not borrowed, since after prediction, the value can be dropped
+    pub fn predict(&mut self, image: [f64; INPUT_SIZE]) -> SVector<f64, OUTPUT_SIZE> {
+        self.input_layer = SVector::<f64, INPUT_SIZE>::from_row_slice(&image);
+        self.hidden_layer_0 = self.weights_matrix_01 * self.input_layer;
+        // Relu must be applied in every layer after firing neurons
+        MLP::apply_relu(&mut self.hidden_layer_0);
+        self.hidden_layer_1 = self.weights_matrix_12 * self.hidden_layer_0;
+        MLP::apply_relu(&mut self.hidden_layer_1);
+        self.output_layer = self.weights_matrix_23 * self.hidden_layer_1;
+        MLP::apply_softmax(&self.output_layer)
+    }
+```
+So after running our current `main.rs`:
+```rust
+fn main() -> Result<(), Box<dyn std::error::Error>>  {
+    let mut mlp = MLP::new();
+    mlp.show_weights();
+    mlp.randomize_weights();
+    mlp.show_weights();
+    let image: [u8; 784] = io::read_image()?;
+    let normalized_image: [f64; 784] = parsers::normalize_image(image);
+    let prediction = mlp.predict(normalized_image);
+    println!("{:?}", prediction);
+    io::render_output(&prediction);
+    Ok(())
+}
+```
+We finally get our fist guess in the form of a probabilities distribution, guessing 5.
+The correct answer was 8 :(
+
+```rust
+[[2.539143790771743e-15, 2.412713529433148e-9, 2.422030173962812e-7, 0.0018935008110995345, 3.404185029212877e-8, 0.9161096634723647, 6.989882245023235e-5, 0.06949902885174457, 3.39904005601683e-11, 0.012427629350766809]]
+ 0 | 
+
+ 1 | 
+
+ 2 | 
+
+ 3 | 
+
+ 4 | 
+
+ 5 | ████████████████████████████████████████████████████████████████████████████████████████████
+
+ 6 | 
+
+ 7 | ███████
+
+ 8 | 
+
+ 9 | █
+ ```

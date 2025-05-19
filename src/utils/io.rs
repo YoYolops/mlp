@@ -1,7 +1,10 @@
 use std::fs::File;
 use std::io::{self, BufReader, Read};
+use nalgebra::SVector;
 
-pub fn read_image() -> io::Result<[u8; 784]> {
+use crate::constants::{INPUT_SIZE, OUTPUT_SIZE};
+
+pub fn read_image() -> io::Result<[u8; INPUT_SIZE]> {
     let file = File::open("./data/train-images.idx3-ubyte")?;
     let mut reader = BufReader::new(file);
 
@@ -16,7 +19,7 @@ pub fn read_image() -> io::Result<[u8; 784]> {
 
     println!("Images: {}, Size: {}x{}", num_images, num_rows, num_cols);
 
-    let mut image = [0u8; 784];
+    let mut image = [0u8; INPUT_SIZE];
     for i in 0..num_images {
         println!("Reading image: {}", i+1);
         reader.read_exact(&mut image)?;
@@ -51,6 +54,19 @@ fn render_image(image: &[u8], mode: char) {
             
             print!("{}", block);
         }
+        println!();
+    }
+}
+
+pub fn render_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
+    const MAX_BAR_LENGTH: u32= 100; // Maximum number of '█' characters per bar
+
+    for (i, val) in output_array.iter().enumerate() {
+        // Clamp values to be between the range 0-1 just to be safe
+        let clamped = val.clamp(0.0, 1.0);
+        let bar_len = (clamped * MAX_BAR_LENGTH as f64).round() as usize;
+        let bar = "█".repeat(bar_len);
+        println!("{:>2} | {}", i, bar);
         println!();
     }
 }

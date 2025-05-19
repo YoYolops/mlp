@@ -76,21 +76,29 @@ impl MLP {
     }
 
 
-    fn apply_relu<const N: usize>(&self, layer: &mut SVector<f64, N>) {
+    fn apply_relu<const N: usize>(layer: &mut SVector<f64, N>) {
         for val in layer.iter_mut() {
             *val = val.max(0.0);
         }
     }
 
-    pub fn predict(&mut self, image: [f64; INPUT_SIZE]) {
+    fn apply_softmax<const N: usize>(layer: &SVector<f64, N>) -> SVector<f64, N> {
+        let max_val = layer.max(); // for numerical stability
+        let exps = layer.map(|x| (x - max_val).exp());
+        let sum: f64 = exps.iter().sum();
+        exps / sum
+    }
+
+    // It is good the image is not borrowed, since after prediction, the value can be dropped
+    pub fn predict(&mut self, image: [f64; INPUT_SIZE]) -> SVector<f64, OUTPUT_SIZE> {
         self.input_layer = SVector::<f64, INPUT_SIZE>::from_row_slice(&image);
         self.hidden_layer_0 = self.weights_matrix_01 * self.input_layer;
         // Relu must be applied in every layer after firing neurons
-        self.apply_relu(&mut self.hidden_layer_0);  // <-- call on self & pass mutable ref
+        MLP::apply_relu(&mut self.hidden_layer_0);
         self.hidden_layer_1 = self.weights_matrix_12 * self.hidden_layer_0;
+        MLP::apply_relu(&mut self.hidden_layer_1);
         self.output_layer = self.weights_matrix_23 * self.hidden_layer_1;
-
-        println!("{:?}", self.output_layer);
+        MLP::apply_softmax(&self.output_layer)
     }
 
 
