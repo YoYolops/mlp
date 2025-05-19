@@ -174,8 +174,9 @@ After randomizing our weights:
 [[2.832064153297856, -7.189384950817572, 29.26444281394776, 38.91743873415687, -15.684375189411712, -11.421555730798271, -3.4437869072569565, -20.747108787807665, 5.599649623093166, -9.700232613382788]]
 ```
 
-### The Softmax Ending
-We had to create a softmax function to turn the output values in a probability table and finish or model 'structurewise'. It kind of worked pretty well. We're now in a very important step, because the only thing separating us from absolute success is figuring out how to train it. Right know it is only randomly guessing the output.
+### Softmax & ReLU
+We had to create a softmax function to turn the output values in a probability table and a ReLU to normalize neuron activation, finishing or model 'structurewise'. 
+It kind of worked pretty well. We're now in a very important step, because the only thing separating us from absolute success is figuring out how to train it. Right know it is only randomly guessing the output.
 
 Have a look at our prediction function:
 ```rust
