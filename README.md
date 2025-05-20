@@ -1,6 +1,8 @@
 # Multilayer Perceptron - MLP
 Today is may 16th, 2025. I'll **TRY** to build a multilayer perceptron from the ground up with rust. This repository will only go public if i succeed :)
 
+This is suposed to be a development diary, to keep me inspired. Nothing else. Lower any expectations.
+
 ### THE PLAN 
 I will use [the MNIST dataset](https://www.kaggle.com/datasets/hojjatk/mnist-dataset) to train my perceptron to be able to recognize handwritten digits.
 
@@ -245,3 +247,10 @@ The correct answer was 8 :(
 
  9 | █
  ```
+
+ ### DON'T FORGET THE BIASES!!!
+ I was thinking that biases were useless. Or at least, i wasn't expecting the hugeness of their importance. Fortunately, i got curious and started studying the theory behind them, and it's absolute cinema, really.
+
+ I recommend [reading this medium article](https://pub.towardsai.net/why-perceptron-neurons-need-bias-input-2144633bcad4) as a starting point. Maybe it fires your curiosity as it did to mine.
+
+ Since the goal here was never to get deep into the theory (this is a development diary), i won't discuss the ins n' outs of biases' effects over MLPs, even because i can barely glimpse it. In pratical terms, we'll need to add one more vector in each layer to be summed with the `weights*input` activation value.
