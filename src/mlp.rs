@@ -10,6 +10,9 @@ pub struct MLP {
     weights_matrix_01: SMatrix<f64, HIDDEN_SIZE, INPUT_SIZE>, // 16 x 784
     weights_matrix_12: SMatrix<f64, HIDDEN_SIZE, HIDDEN_SIZE>, // 16 x 16
     weights_matrix_23: SMatrix<f64, OUTPUT_SIZE, HIDDEN_SIZE>, //   // 10 x 16
+    hidden_bias_0: SVector<f64, HIDDEN_SIZE>,
+    hidden_bias_1: SVector<f64, HIDDEN_SIZE>,
+    output_bias: SVector<f64, OUTPUT_SIZE>,
 }
 
 impl MLP {
@@ -23,6 +26,9 @@ impl MLP {
             weights_matrix_01: SMatrix::<f64, HIDDEN_SIZE, INPUT_SIZE>::from_element(0.0),
             weights_matrix_12: SMatrix::<f64, HIDDEN_SIZE, HIDDEN_SIZE>::from_element(0.0),
             weights_matrix_23: SMatrix::<f64, OUTPUT_SIZE, HIDDEN_SIZE>::from_element(0.0),
+            hidden_bias_0: SVector::<f64, HIDDEN_SIZE>::from_element(0.0),
+            hidden_bias_1: SVector::<f64, HIDDEN_SIZE>::from_element(0.0),
+            output_bias: SVector::<f64, OUTPUT_SIZE>::from_element(0.0),
         }
     }
 
@@ -82,7 +88,7 @@ impl MLP {
         }
     }
 
-    fn apply_softmax<const N: usize>(layer: &SVector<f64, N>) -> SVector<f64, N> {
+    fn softmax<const N: usize>(layer: &SVector<f64, N>) -> SVector<f64, N> {
         let max_val = layer.max(); // for numerical stability
         let exps = layer.map(|x| (x - max_val).exp());
         let sum: f64 = exps.iter().sum();
@@ -92,13 +98,15 @@ impl MLP {
     // It is good the image is not borrowed, since after prediction, the value can be dropped
     pub fn predict(&mut self, image: [f64; INPUT_SIZE]) -> SVector<f64, OUTPUT_SIZE> {
         self.input_layer = SVector::<f64, INPUT_SIZE>::from_row_slice(&image);
-        self.hidden_layer_0 = self.weights_matrix_01 * self.input_layer;
-        // Relu must be applied in every layer after firing neurons
+
+        self.hidden_layer_0 = (self.weights_matrix_01 * self.input_layer) + self.hidden_bias_0;
         MLP::apply_relu(&mut self.hidden_layer_0);
-        self.hidden_layer_1 = self.weights_matrix_12 * self.hidden_layer_0;
+
+        self.hidden_layer_1 = (self.weights_matrix_12 * self.hidden_layer_0) + self.hidden_bias_1;
         MLP::apply_relu(&mut self.hidden_layer_1);
-        self.output_layer = self.weights_matrix_23 * self.hidden_layer_1;
-        MLP::apply_softmax(&self.output_layer)
+
+        self.output_layer = (self.weights_matrix_23 * self.hidden_layer_1) + self.output_bias;
+        MLP::softmax(&self.output_layer)
     }
 
 
