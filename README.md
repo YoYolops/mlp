@@ -331,3 +331,26 @@ impl Iterator for MNISTReader {
     }
 }
 ```
+
+### Finally, we train
+Confession time: The training function is entirely LLM made.
+I understood the training strategy in theory, mentioned in our [source video](https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi). But i wasn't very sure about how to implement it correctly, and to save timem i asked my friend gepetto.
+
+Surprisingly everything went awful. After iterating over the entire 60.000 images, our perceptron could barely make a single correct prediction. Then, making some research, i came across the fact that, usually, a single pass through the data is not enough, and that's the concept of epochs, so i tried running over the dataset multiple times and:
+
+```rust
+Epoch 0 Accuracy: 14.01%
+Epoch 1 Accuracy: 9.24%
+Epoch 2 Accuracy: 9.24%
+Epoch 3 Accuracy: 9.24%
+Epoch 4 Accuracy: 9.24%
+Epoch 5 Accuracy: 9.24%
+Epoch 6 Accuracy: 9.24%
+Epoch 7 Accuracy: 9.24%
+Epoch 8 Accuracy: 9.24%
+Epoch 9 Accuracy: 9.24%
+```
+
+At least i got to see that the predictions were entirely random. The mlp has to choose one of ten labels. The random proportion is, therefore, 10%, which is what we see over and over throughout epochs. In our source video, our narrator mentions the idea of training functions updating weights, ideally, only after iterating over the entire dataset. This is problematically performancewise, so it is recommended to update weights in smaller intervals. Following this guideline, i had the brilliant idea of executing the update function once per image. In (yet) another research, i found out that this strategy arises some kind of noisy behavior, where the direction of improvement can't be found as easily by the perceptron.
+
+Another issue was my randomize_weights function. The initial idea was to set all the weights to random values between -1 and 1, which was too wide of a range. After implementing the concept of batches as a group of images after which the weights are updated and tightening the random weights interval, we got massive improvement in our perceptron: 

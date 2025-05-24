@@ -3,7 +3,7 @@ use std::io::{self, BufReader, Read};
 use nalgebra::SVector;
 use std::path::Path;
 
-use crate::constants::{INPUT_SIZE, OUTPUT_SIZE};
+use crate::constants::{INPUT_SIZE, OUTPUT_SIZE, LABEL_SIZE};
 
 pub struct MNISTReader {
     image_reader: BufReader<File>,
@@ -45,7 +45,7 @@ impl Iterator for MNISTReader {
         }
 
         let mut image = [0u8; INPUT_SIZE];
-        let mut label = [0u8; 1];
+        let mut label = [0u8; LABEL_SIZE];
 
         if let Err(e) = self.image_reader.read_exact(&mut image) {
             return Some(Err(e));
@@ -83,7 +83,7 @@ pub fn render_mnist_image(image: &[u8], mode: char) {
 }
 
 pub fn render_mlp_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
-    const MAX_BAR_LENGTH: u32= 100; // Maximum number of '█' characters per bar
+    const MAX_BAR_LENGTH: u32= 80; // Maximum number of '█' characters per bar
 
     for (i, val) in output_array.iter().enumerate() {
         // Clamp values to be between the range 0-1 just to be safe
