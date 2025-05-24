@@ -32,7 +32,7 @@ Offset*| Meaning
 
 *the offset is in bytes
 
-After that, we will have all the 28x28 bitmap images, where each pixel is a single byte integer (0-255), representing a greyscale. That's why i said the binary format of the dataset with its bitmap greyscale nature would come in hand. jpeg images would need to be pre processed to turn each pixel into an integer, but now we can skip this part. It's just like if the dataset was specially designed to this algorithm.
+After that, we will have all the 28x28 bitmap images, where each pixel is a single byte integer (0-255), representing a grayscale. That's why i said the binary format of the dataset with its bitmap grayscale nature would come in hand. jpeg images would need to be pre processed to turn each pixel into an integer, but now we can skip this part. It's just like if the dataset was specially designed to this algorithm.
 
 Since Rust already provides functionalities to read binary data, i just had to write a simple wrapper function that receives a reader and starts appending 32bits integers to it:
 
@@ -44,7 +44,7 @@ fn read_u32_big_endian(reader: &mut impl Read) -> io::Result<u32> {
 }
 ```
 
-After opening the file and moving the buffer cursor away from the headers and start reading the images, its time to render them. For that, we get each pixel integer value and render one of five ascii characters representing different greyscales:
+After opening the file and moving the buffer cursor away from the headers and start reading the images, its time to render them. For that, we get each pixel integer value and render one of five ascii characters representing different grayscales:
 
 ```rust
 fn render_image(image: &[u8], mode: char) {
@@ -396,3 +396,9 @@ It took a lot more time to train, but we can see the perceptron is more assertiv
 ### Missing parts
 We still have a few problems. First we need to add functions to store the weights in some kind of .txt file and to load them as well.
 We'll also need to come up with a way of creating new images equivalent to MNIST dataset, so i can show off to some of my friends by asking them to write some number and inputing it to our perceptron.
+
+### Dynamic vs Static
+So i've built a dynamic version of our MLP. It makes use of nalgebra DVectors and DMatrixes, wich uses heap allocated vectors instead of stack allocated arrays.
+The result was expected but yet surprising to see, the same static MLP, with an identical amount of layers and neurons to the dynamic one, has around 15% better performance. Just by using Stack instead of Heap!!!
+
+Of course we have a tradeoff, versatility vs performance. 

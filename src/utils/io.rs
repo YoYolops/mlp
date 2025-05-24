@@ -1,9 +1,42 @@
-use std::fs::File;
+use std::fs::{File, read_dir};
 use std::io::{self, BufReader, Read};
+use std::vec::IntoIter;
 use nalgebra::SVector;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use image::{GenericImageView, GrayImage, Luma};
 
 use crate::constants::{INPUT_SIZE, OUTPUT_SIZE, LABEL_SIZE};
+
+pub struct InputHandler {
+    image_paths: IntoIter<PathBuf>,
+}
+
+impl InputHandler {
+    pub fn new<P: AsRef<Path>>(folder: P) -> io::Result<Self> {
+        let entries = read_dir(&folder)?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.is_file() && path.extension().map_or(false, |ext| ext == "png")
+            })
+            .collect::<Vec<_>>();
+
+        Ok(
+            InputHandler {
+                image_paths: entries.into_iter(),
+            }
+        )
+    }
+    
+}
+
+impl Iterator for InputHandler {
+    type Item = Result<[u8; INPUT_SIZE], Box<dyn std::error::Error>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.image_paths.next().map(|path| png_to_mnist(path))
+    }
+}
 
 pub struct MNISTReader {
     image_reader: BufReader<File>,
@@ -26,7 +59,7 @@ impl MNISTReader {
         let total = u32::from_be_bytes([image_header[4], image_header[5], image_header[6], image_header[7]]) as usize;
 
         Ok(
-            Self {
+            MNISTReader {
                 image_reader: image_file,
                 label_reader: label_file,
                 index: 0,
@@ -86,11 +119,27 @@ pub fn render_mlp_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
     const MAX_BAR_LENGTH: u32= 80; // Maximum number of '█' characters per bar
 
     for (i, val) in output_array.iter().enumerate() {
-        // Clamp values to be between the range 0-1 just to be safe
         let clamped = val.clamp(0.0, 1.0);
         let bar_len = (clamped * MAX_BAR_LENGTH as f64).round() as usize;
         let bar = "█".repeat(bar_len);
         println!("{:>2} | {}", i, bar);
         println!();
     }
+}
+
+pub fn png_to_mnist<P: AsRef<Path>>(path: P) -> Result<[u8; INPUT_SIZE], Box<dyn std::error::Error>> {
+    // Convert to grayscale
+    let img = image::open(path)?.to_luma8();
+
+    if img.width() != 28 || img.height() != 28 {
+        return Err("Image must be 28x28 pixels".into());
+    }
+
+    let mut data = [0u8; INPUT_SIZE];
+
+    for (i, pixel) in img.pixels().enumerate() {
+        data[i] = pixel[0];
+    }
+
+    Ok(data)
 }

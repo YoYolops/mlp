@@ -14,6 +14,9 @@ const BATCH_SIZE: usize = 32;
 const EPOCHS: usize = 10;
 const LEARNING_RATE: f64 = 0.01;
 
+const TRAINING_IMAGES_PATH: &str = "./training_data/train-images.idx3-ubyte";
+const TRAINING_LABELS_PATH: &str = "./training_data/train-labels.idx1-ubyte";
+
 fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
     let layer_sizes = vec![784, 16, 16, 10];
     // Weights randomization is done in NEW for the dianmyc MLP
@@ -22,8 +25,8 @@ fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
 
     for epoch in 1..=EPOCHS {
         let train_mnist = MNISTReader::new(
-            Path::new("./data/train-images.idx3-ubyte"),
-            Path::new("./data/train-labels.idx1-ubyte"),
+            Path::new(TRAINING_IMAGES_PATH),
+            Path::new(TRAINING_LABELS_PATH),
         )?;
 
         let mut images_batch = Vec::with_capacity(BATCH_SIZE);
@@ -76,8 +79,8 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
 
     for epoch in 1..=EPOCHS {
         let train_mnist = MNISTReader::new(
-            Path::new("./data/train-images.idx3-ubyte"),
-            Path::new("./data/train-labels.idx1-ubyte"),
+            Path::new(TRAINING_IMAGES_PATH),
+            Path::new(TRAINING_LABELS_PATH),
         )?;
 
         let mut images_batch = Vec::with_capacity(BATCH_SIZE);
