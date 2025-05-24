@@ -117,62 +117,85 @@ impl MLP {
         MLP::softmax(&self.output_layer)
     }
 
-    pub fn train_cross_entropy(
+    pub fn train_cross_entropy_batch(
         &mut self,
-        image: [f64; INPUT_SIZE],
-        target_label: u8,
+        images: &[[f64; INPUT_SIZE]],
+        target_labels: &[u8],
         learning_rate: f64,
-    ) -> SVector<f64, OUTPUT_SIZE> {
-        // Forward pass
-        let prediction = self.predict(image);
+    ) -> Vec<SVector<f64, OUTPUT_SIZE>> {
+        let batch_size = images.len();
+        assert_eq!(batch_size, target_labels.len());
 
-        // Create one-hot encoded target vector
-        let mut target = SVector::<f64, OUTPUT_SIZE>::from_element(0.0);
-        target[target_label as usize] = 1.0;
+        // Accumulators for gradients (initialize to zeros)
+        let mut grad_w23_accum = nalgebra::SMatrix::<f64, OUTPUT_SIZE, HIDDEN_SIZE>::zeros();
+        let mut grad_b_output_accum = nalgebra::SVector::<f64, OUTPUT_SIZE>::zeros();
 
-        // === Backpropagation ===
+        let mut grad_w12_accum = nalgebra::SMatrix::<f64, HIDDEN_SIZE, HIDDEN_SIZE>::zeros();
+        let mut grad_b_hidden_1_accum = nalgebra::SVector::<f64, HIDDEN_SIZE>::zeros();
 
-        // Gradient of Cross-Entropy Loss with Softmax:
-        // grad = prediction - target
-        let delta_output = prediction - target;
+        let mut grad_w01_accum = nalgebra::SMatrix::<f64, HIDDEN_SIZE, INPUT_SIZE>::zeros();
+        let mut grad_b_hidden_0_accum = nalgebra::SVector::<f64, HIDDEN_SIZE>::zeros();
 
-        // Gradient for weights_matrix_23 and output_bias
-        let grad_w23 = delta_output * self.hidden_layer_1.transpose();
-        let grad_b_output = delta_output;
+        let mut predictions = Vec::with_capacity(batch_size);
 
-        // Backprop to hidden_layer_1
-        let mut delta_hidden_1 = self.weights_matrix_23.transpose() * delta_output;
-        for i in 0..HIDDEN_SIZE {
-            if self.hidden_layer_1[i] <= 0.0 {
-                delta_hidden_1[i] = 0.0; // ReLU derivative
+        for (image, &label) in images.iter().zip(target_labels.iter()) {
+            // Forward pass (store intermediate layers inside MLP struct)
+            let prediction = self.predict(*image);
+            predictions.push(prediction.clone());
+
+            // One-hot target vector
+            let mut target = SVector::<f64, OUTPUT_SIZE>::from_element(0.0);
+            target[label as usize] = 1.0;
+
+            let delta_output = &prediction - &target;
+
+            // Calculate gradients same way as in your single train_cross_entropy function
+            let grad_w23 = &delta_output * self.hidden_layer_1.transpose();
+            let grad_b_output = delta_output.clone();
+
+            let mut delta_hidden_1 = self.weights_matrix_23.transpose() * &delta_output;
+            for i in 0..HIDDEN_SIZE {
+                if self.hidden_layer_1[i] <= 0.0 {
+                    delta_hidden_1[i] = 0.0; // ReLU derivative
+                }
             }
+
+            let grad_w12 = &delta_hidden_1 * self.hidden_layer_0.transpose();
+            let grad_b_hidden_1 = delta_hidden_1.clone();
+
+            let mut delta_hidden_0 = self.weights_matrix_12.transpose() * &delta_hidden_1;
+            for i in 0..HIDDEN_SIZE {
+                if self.hidden_layer_0[i] <= 0.0 {
+                    delta_hidden_0[i] = 0.0; // ReLU derivative
+                }
+            }
+
+            let grad_w01 = &delta_hidden_0 * self.input_layer.transpose();
+            let grad_b_hidden_0 = delta_hidden_0;
+
+            // Accumulate gradients for batch update
+            grad_w23_accum += grad_w23;
+            grad_b_output_accum += grad_b_output;
+
+            grad_w12_accum += grad_w12;
+            grad_b_hidden_1_accum += grad_b_hidden_1;
+
+            grad_w01_accum += grad_w01;
+            grad_b_hidden_0_accum += grad_b_hidden_0;
         }
 
-        // Gradient for weights_matrix_12 and bias
-        let grad_w12 = delta_hidden_1 * self.hidden_layer_0.transpose();
-        let grad_b_hidden_1 = delta_hidden_1;
+        // Average gradients over batch size
+        let batch_size_f64 = batch_size as f64;
+        self.weights_matrix_23 -= learning_rate * grad_w23_accum / batch_size_f64;
+        self.output_bias -= learning_rate * grad_b_output_accum / batch_size_f64;
 
-        // Backprop to hidden_layer_0
-        let mut delta_hidden_0 = self.weights_matrix_12.transpose() * delta_hidden_1;
-        for i in 0..HIDDEN_SIZE {
-            if self.hidden_layer_0[i] <= 0.0 {
-                delta_hidden_0[i] = 0.0; // ReLU derivative
-            }
-        }
+        self.weights_matrix_12 -= learning_rate * grad_w12_accum / batch_size_f64;
+        self.hidden_bias_1 -= learning_rate * grad_b_hidden_1_accum / batch_size_f64;
 
-        let grad_w01 = delta_hidden_0 * self.input_layer.transpose();
-        let grad_b_hidden_0 = delta_hidden_0;
+        self.weights_matrix_01 -= learning_rate * grad_w01_accum / batch_size_f64;
+        self.hidden_bias_0 -= learning_rate * grad_b_hidden_0_accum / batch_size_f64;
 
-        // === Weight & Bias Updates ===
-        self.weights_matrix_23 -= learning_rate * grad_w23;
-        self.output_bias -= learning_rate * grad_b_output;
-
-        self.weights_matrix_12 -= learning_rate * grad_w12;
-        self.hidden_bias_1 -= learning_rate * grad_b_hidden_1;
-
-        self.weights_matrix_01 -= learning_rate * grad_w01;
-        self.hidden_bias_0 -= learning_rate * grad_b_hidden_0;
-        prediction
+        predictions
     }
 
     pub fn load_weights(&self) {

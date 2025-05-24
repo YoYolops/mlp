@@ -5,35 +5,64 @@ mod utils;
 use utils::io::MNISTReader;
 use std::path::Path;
 
+use crate::utils::parsers;
 use crate::mlp::MLP;
-use crate::utils::{io, parsers};
 
-fn main() -> Result<(), Box<dyn std::error::Error>>  {
-    const TRAINING_EPOCHS: u32 = 10;
+const BATCH_SIZE: usize = 32;
+const EPOCHS: usize = 10;
+const LEARNING_RATE: f64 = 0.01;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut mlp = MLP::new();
-
     mlp.randomize_weights();
-    mlp.show_weights();
 
-    for epoch in 0..TRAINING_EPOCHS {
+    for epoch in 1..=EPOCHS {
+        println!("=== EPOCH {epoch} ===");
+
         let train_mnist = MNISTReader::new(
             Path::new("./data/train-images.idx3-ubyte"),
-            Path::new("./data/train-labels.idx1-ubyte")
+            Path::new("./data/train-labels.idx1-ubyte"),
         )?;
-        let mut correct_predictions: i32 = 0;
-        let mut total_predictions: i32 = 0;
+
+        let mut images_batch = Vec::with_capacity(BATCH_SIZE);
+        let mut labels_batch = Vec::with_capacity(BATCH_SIZE);
+        let mut correct = 0;
+        let mut total = 0;
 
         for result in train_mnist {
             let (image, label) = result?;
-            //io::render_mnist_image(&image, 'p');
-            let normalized_image: [f64; 784] = parsers::normalize_image(image);
-            let prediction = mlp.train_cross_entropy(normalized_image, label, 0.1);
-            if prediction.argmax().0 == label as usize {
-                correct_predictions += 1;
+            let normalized = parsers::normalize_image(image);
+            images_batch.push(normalized);
+            labels_batch.push(label);
+
+            if images_batch.len() == BATCH_SIZE {
+                let predictions = mlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
+
+                for (pred, &actual_label) in predictions.iter().zip(&labels_batch) {
+                    if pred.argmax().0 == actual_label as usize {
+                        correct += 1;
+                    }
+                    total += 1;
+                }
+
+                images_batch.clear();
+                labels_batch.clear();
             }
-            total_predictions += 1;
         }
-        println!("Epoch {epoch} Accuracy: {:.2}%", 100.0 * correct_predictions as f64 / total_predictions as f64);
+
+        // Handle any leftovers
+        if !images_batch.is_empty() {
+            let predictions = mlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
+            for (pred, &actual_label) in predictions.iter().zip(&labels_batch) {
+                if pred.argmax().0 == actual_label as usize {
+                    correct += 1;
+                }
+                total += 1;
+            }
+        }
+
+        let accuracy = (correct as f64) / (total as f64) * 100.0;
+        println!("Epoch {epoch} Accuracy: {:.2}%", accuracy);
     }
 
     Ok(())
