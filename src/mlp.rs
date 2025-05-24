@@ -149,7 +149,7 @@ impl MLP {
 
             let delta_output = &prediction - &target;
 
-            // Calculate gradients same way as in your single train_cross_entropy function
+            // Calculate gradients
             let grad_w23 = &delta_output * self.hidden_layer_1.transpose();
             let grad_b_output = delta_output.clone();
 

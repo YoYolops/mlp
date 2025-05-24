@@ -17,8 +17,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     mlp.randomize_weights();
 
     for epoch in 1..=EPOCHS {
-        println!("=== EPOCH {epoch} ===");
-
         let train_mnist = MNISTReader::new(
             Path::new("./data/train-images.idx3-ubyte"),
             Path::new("./data/train-labels.idx1-ubyte"),
@@ -50,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // Handle any leftovers
+        // Handle leftovers
         if !images_batch.is_empty() {
             let predictions = mlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
             for (pred, &actual_label) in predictions.iter().zip(&labels_batch) {

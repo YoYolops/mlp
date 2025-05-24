@@ -339,18 +339,60 @@ I understood the training strategy in theory, mentioned in our [source video](ht
 Surprisingly everything went awful. After iterating over the entire 60.000 images, our perceptron could barely make a single correct prediction. Then, making some research, i came across the fact that, usually, a single pass through the data is not enough, and that's the concept of epochs, so i tried running over the dataset multiple times and:
 
 ```rust
-Epoch 0 Accuracy: 14.01%
-Epoch 1 Accuracy: 9.24%
-Epoch 2 Accuracy: 9.24%
-Epoch 3 Accuracy: 9.24%
-Epoch 4 Accuracy: 9.24%
-Epoch 5 Accuracy: 9.24%
-Epoch 6 Accuracy: 9.24%
-Epoch 7 Accuracy: 9.24%
-Epoch 8 Accuracy: 9.24%
-Epoch 9 Accuracy: 9.24%
+Epoch 01 Accuracy: 14.01%
+Epoch 02 Accuracy: 9.24%
+Epoch 03 Accuracy: 9.24%
+Epoch 04 Accuracy: 9.24%
+Epoch 05 Accuracy: 9.24%
+Epoch 06 Accuracy: 9.24%
+Epoch 07 Accuracy: 9.24%
+Epoch 08 Accuracy: 9.24%
+Epoch 09 Accuracy: 9.24%
+Epoch 10 Accuracy: 9.24%
 ```
 
 At least i got to see that the predictions were entirely random. The mlp has to choose one of ten labels. The random proportion is, therefore, 10%, which is what we see over and over throughout epochs. In our source video, our narrator mentions the idea of training functions updating weights, ideally, only after iterating over the entire dataset. This is problematically performancewise, so it is recommended to update weights in smaller intervals. Following this guideline, i had the brilliant idea of executing the update function once per image. In (yet) another research, i found out that this strategy arises some kind of noisy behavior, where the direction of improvement can't be found as easily by the perceptron.
 
-Another issue was my randomize_weights function. The initial idea was to set all the weights to random values between -1 and 1, which was too wide of a range. After implementing the concept of batches as a group of images after which the weights are updated and tightening the random weights interval, we got massive improvement in our perceptron: 
+Another issue was my randomize_weights function. The initial idea was to set all the weights to random values between -1 and 1, which was too wide of a range. After implementing the concept of batches as a group of images after which the weights are updated and tightening the random weights interval, we got massive improvement in our perceptron:
+
+```rust
+Epoch 01 Accuracy: 74.21%
+Epoch 02 Accuracy: 89.10%
+Epoch 03 Accuracy: 90.84%
+Epoch 04 Accuracy: 91.93%
+Epoch 05 Accuracy: 92.60%
+Epoch 06 Accuracy: 93.09%
+Epoch 07 Accuracy: 93.42%
+Epoch 08 Accuracy: 93.66%
+Epoch 09 Accuracy: 93.89%
+Epoch 10 Accuracy: 94.05%
+```
+
+### Funny to see
+The way we chose to build our perceptron, we cannot alter the amount of layers, but we managed to keep it flexible in regard to the amount of neurons in each layer. We can simply alter the constant `HIDDEN_SIZE` to 32 instead of 16, in our `constants.rs`:
+```rust
+pub const INPUT_SIZE: usize = 784;
+pub const HIDDEN_SIZE: usize = 32;
+pub const OUTPUT_SIZE: usize = 10;
+pub const LABEL_SIZE: usize = 1;
+```
+
+We can add another constant in the future so we can have any given amount of neurons for each of the two hidden layers, but lets check the impact in our perceptron training statistics:
+```rust
+Epoch 01 Accuracy: 82.22%
+Epoch 02 Accuracy: 91.50%
+Epoch 03 Accuracy: 92.84%
+Epoch 04 Accuracy: 93.64%
+Epoch 05 Accuracy: 94.23%
+Epoch 06 Accuracy: 94.71%
+Epoch 07 Accuracy: 95.05%
+Epoch 08 Accuracy: 95.37%
+Epoch 09 Accuracy: 95.63%
+Epoch 10 Accuracy: 95.90%
+```
+
+It took a lot more time to train, but we can see the perceptron is more assertive while training when the number of neurons is increased in the hidden layers. This makes a lot of sense, since the hidden layer's neurons are responsible for capturing image's features. The largest is the amount of neurons, the largest is expected to be the amount of nuances they can represent, therefore achieving better results.
+
+### Missing parts
+We still have a few problems. First we need to add functions to store the weights in some kind of .txt file and to load them as well.
+We'll also need to come up with a way of creating new images equivalent to MNIST dataset, so i can show off to some of my friends by asking them to write some number and inputing it to our perceptron.
