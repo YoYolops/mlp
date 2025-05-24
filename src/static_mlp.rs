@@ -1,34 +1,43 @@
+
+/* 
+    This MLP has a fixed size of layers (input, 2 hidden layers, output);
+    The number of neurons in the hidden layers is dynamic, and can be changed via the
+    update of contants in contants.rs file
+
+    It is less versatile but faster, since it makes use of little or no heap memory.
+*/
+
 use rand::rng;
 use rand_distr::{Distribution, Normal};
 use nalgebra::{SMatrix, SVector};
-use crate::constants::{OUTPUT_SIZE, HIDDEN_SIZE, INPUT_SIZE};
+use crate::constants::{OUTPUT_SIZE, HIDDEN_SIZE_0, HIDDEN_SIZE_1, INPUT_SIZE};
 
-pub struct MLP {
+pub struct SMLP {
     input_layer: SVector<f64, INPUT_SIZE>,              // 784 x 1
-    hidden_layer_0: SVector<f64, HIDDEN_SIZE>,          // 16 x 1
-    hidden_layer_1: SVector<f64, HIDDEN_SIZE>,          // 16 x 1
+    hidden_layer_0: SVector<f64, HIDDEN_SIZE_0>,          // 16 x 1
+    hidden_layer_1: SVector<f64, HIDDEN_SIZE_1>,          // 16 x 1
     output_layer: SVector<f64, OUTPUT_SIZE>,            // 10 x 1
-    weights_matrix_01: SMatrix<f64, HIDDEN_SIZE, INPUT_SIZE>, // 16 x 784
-    weights_matrix_12: SMatrix<f64, HIDDEN_SIZE, HIDDEN_SIZE>, // 16 x 16
-    weights_matrix_23: SMatrix<f64, OUTPUT_SIZE, HIDDEN_SIZE>, //   // 10 x 16
-    hidden_bias_0: SVector<f64, HIDDEN_SIZE>,
-    hidden_bias_1: SVector<f64, HIDDEN_SIZE>,
+    weights_matrix_01: SMatrix<f64, HIDDEN_SIZE_0, INPUT_SIZE>, // 16 x 784
+    weights_matrix_12: SMatrix<f64, HIDDEN_SIZE_1, HIDDEN_SIZE_0>, // 16 x 16
+    weights_matrix_23: SMatrix<f64, OUTPUT_SIZE, HIDDEN_SIZE_1>, //   // 10 x 16
+    hidden_bias_0: SVector<f64, HIDDEN_SIZE_0>,
+    hidden_bias_1: SVector<f64, HIDDEN_SIZE_1>,
     output_bias: SVector<f64, OUTPUT_SIZE>,
 }
 
-impl MLP {
+impl SMLP {
 
     pub fn new() -> Self {
-        MLP {
+        SMLP {
             input_layer: SVector::<f64, INPUT_SIZE>::from_element(0.0),
-            hidden_layer_0: SVector::<f64, HIDDEN_SIZE>::from_element(0.0),
-            hidden_layer_1: SVector::<f64, HIDDEN_SIZE>::from_element(0.0),
+            hidden_layer_0: SVector::<f64, HIDDEN_SIZE_0>::from_element(0.0),
+            hidden_layer_1: SVector::<f64, HIDDEN_SIZE_1>::from_element(0.0),
             output_layer: SVector::<f64, OUTPUT_SIZE>::from_element(0.0),
-            weights_matrix_01: SMatrix::<f64, HIDDEN_SIZE, INPUT_SIZE>::from_element(0.0),
-            weights_matrix_12: SMatrix::<f64, HIDDEN_SIZE, HIDDEN_SIZE>::from_element(0.0),
-            weights_matrix_23: SMatrix::<f64, OUTPUT_SIZE, HIDDEN_SIZE>::from_element(0.0),
-            hidden_bias_0: SVector::<f64, HIDDEN_SIZE>::from_element(0.0),
-            hidden_bias_1: SVector::<f64, HIDDEN_SIZE>::from_element(0.0),
+            weights_matrix_01: SMatrix::<f64, HIDDEN_SIZE_0, INPUT_SIZE>::from_element(0.0),
+            weights_matrix_12: SMatrix::<f64, HIDDEN_SIZE_1, HIDDEN_SIZE_0>::from_element(0.0),
+            weights_matrix_23: SMatrix::<f64, OUTPUT_SIZE, HIDDEN_SIZE_1>::from_element(0.0),
+            hidden_bias_0: SVector::<f64, HIDDEN_SIZE_0>::from_element(0.0),
+            hidden_bias_1: SVector::<f64, HIDDEN_SIZE_1>::from_element(0.0),
             output_bias: SVector::<f64, OUTPUT_SIZE>::from_element(0.0),
         }
     }
@@ -46,7 +55,7 @@ impl MLP {
         }
 
         // He initialization for weights_matrix_12 (fan_in = HIDDEN_SIZE)
-        let he_std_12 = (2.0 / HIDDEN_SIZE as f64).sqrt();
+        let he_std_12 = (2.0 / HIDDEN_SIZE_0 as f64).sqrt();
         let dist_12 = Normal::new(0.0, he_std_12).unwrap();
         for i in 0..self.weights_matrix_12.nrows() {
             for j in 0..self.weights_matrix_12.ncols() {
@@ -55,7 +64,7 @@ impl MLP {
         }
 
         // He initialization for weights_matrix_23 (fan_in = HIDDEN_SIZE)
-        let he_std_23 = (2.0 / HIDDEN_SIZE as f64).sqrt();
+        let he_std_23 = (2.0 / HIDDEN_SIZE_1 as f64).sqrt();
         let dist_23 = Normal::new(0.0, he_std_23).unwrap();
         for i in 0..self.weights_matrix_23.nrows() {
             for j in 0..self.weights_matrix_23.ncols() {
@@ -108,13 +117,13 @@ impl MLP {
         self.input_layer = SVector::<f64, INPUT_SIZE>::from_row_slice(&image);
 
         self.hidden_layer_0 = (self.weights_matrix_01 * self.input_layer) + self.hidden_bias_0;
-        MLP::apply_relu(&mut self.hidden_layer_0);
+        SMLP::apply_relu(&mut self.hidden_layer_0);
 
         self.hidden_layer_1 = (self.weights_matrix_12 * self.hidden_layer_0) + self.hidden_bias_1;
-        MLP::apply_relu(&mut self.hidden_layer_1);
+        SMLP::apply_relu(&mut self.hidden_layer_1);
 
         self.output_layer = (self.weights_matrix_23 * self.hidden_layer_1) + self.output_bias;
-        MLP::softmax(&self.output_layer)
+        SMLP::softmax(&self.output_layer)
     }
 
     pub fn train_cross_entropy_batch(
@@ -127,19 +136,19 @@ impl MLP {
         assert_eq!(batch_size, target_labels.len());
 
         // Accumulators for gradients (initialize to zeros)
-        let mut grad_w23_accum = nalgebra::SMatrix::<f64, OUTPUT_SIZE, HIDDEN_SIZE>::zeros();
+        let mut grad_w23_accum = nalgebra::SMatrix::<f64, OUTPUT_SIZE, HIDDEN_SIZE_1>::zeros();
         let mut grad_b_output_accum = nalgebra::SVector::<f64, OUTPUT_SIZE>::zeros();
 
-        let mut grad_w12_accum = nalgebra::SMatrix::<f64, HIDDEN_SIZE, HIDDEN_SIZE>::zeros();
-        let mut grad_b_hidden_1_accum = nalgebra::SVector::<f64, HIDDEN_SIZE>::zeros();
+        let mut grad_w12_accum = nalgebra::SMatrix::<f64, HIDDEN_SIZE_1, HIDDEN_SIZE_0>::zeros();
+        let mut grad_b_hidden_1_accum = nalgebra::SVector::<f64, HIDDEN_SIZE_1>::zeros();
 
-        let mut grad_w01_accum = nalgebra::SMatrix::<f64, HIDDEN_SIZE, INPUT_SIZE>::zeros();
-        let mut grad_b_hidden_0_accum = nalgebra::SVector::<f64, HIDDEN_SIZE>::zeros();
+        let mut grad_w01_accum = nalgebra::SMatrix::<f64, HIDDEN_SIZE_0, INPUT_SIZE>::zeros();
+        let mut grad_b_hidden_0_accum = nalgebra::SVector::<f64, HIDDEN_SIZE_0>::zeros();
 
         let mut predictions = Vec::with_capacity(batch_size);
 
         for (image, &label) in images.iter().zip(target_labels.iter()) {
-            // Forward pass (store intermediate layers inside MLP struct)
+            // Forward pass (store intermediate layers inside SMLP struct)
             let prediction = self.predict(*image);
             predictions.push(prediction.clone());
 
@@ -154,7 +163,7 @@ impl MLP {
             let grad_b_output = delta_output.clone();
 
             let mut delta_hidden_1 = self.weights_matrix_23.transpose() * &delta_output;
-            for i in 0..HIDDEN_SIZE {
+            for i in 0..HIDDEN_SIZE_1 {
                 if self.hidden_layer_1[i] <= 0.0 {
                     delta_hidden_1[i] = 0.0; // ReLU derivative
                 }
@@ -164,7 +173,7 @@ impl MLP {
             let grad_b_hidden_1 = delta_hidden_1.clone();
 
             let mut delta_hidden_0 = self.weights_matrix_12.transpose() * &delta_hidden_1;
-            for i in 0..HIDDEN_SIZE {
+            for i in 0..HIDDEN_SIZE_0 {
                 if self.hidden_layer_0[i] <= 0.0 {
                     delta_hidden_0[i] = 0.0; // ReLU derivative
                 }
