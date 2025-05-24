@@ -402,3 +402,23 @@ So i've built a dynamic version of our MLP. It makes use of nalgebra DVectors an
 The result was expected but yet surprising to see, the same static MLP, with an identical amount of layers and neurons to the dynamic one, has around 15% better performance. Just by using Stack instead of Heap!!!
 
 Of course we have a tradeoff, versatility vs performance. 
+
+### Despair, hangover and ecstasy
+[by the do](https://www.youtube.com/watch?v=-_wJ2OwsbBc)
+
+So, i've built function to convert .png to binary that can be understand by our MLPs, also a load_weights() and a save_weights() function so we don't have to train the perceptron every time we run our program. Unfortunately, even with our 95% accuracy in the training set, we are still not able to predict users input easily. Therefore we will try to tweak our perceptron to achieve greater performance.
+Note: We're using the SMLP (the static version). Cause it is faster and more than enough to get to our goal :)
+To do so, we are going to increase the number of neurons on the hidden layers. Now, we'll have `[784, 64, 32, 10]` instead of the classic `[784, 16, 16, 10]`. 
+
+Also, have a look at our new training constants:
+```rust
+// Previous training constants:
+pub const BATCH_SIZE: usize = 32;
+pub const EPOCHS: usize = 10;
+pub const LEARNING_RATE: f64 = 0.01;
+
+// New training constants:
+pub const BATCH_SIZE: usize = 64;
+pub const EPOCHS: usize = 20;
+pub const LEARNING_RATE: f64 = 0.01;
+```

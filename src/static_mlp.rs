@@ -8,6 +8,9 @@
 */
 
 use rand::rng;
+use bytemuck::{cast_slice, cast_slice_mut};
+use std::fs::{File};
+use std::io::{Read, Result, Write};
 use rand_distr::{Distribution, Normal};
 use nalgebra::{SMatrix, SVector};
 use crate::constants::{OUTPUT_SIZE, HIDDEN_SIZE_0, HIDDEN_SIZE_1, INPUT_SIZE};
@@ -207,12 +210,50 @@ impl SMLP {
         predictions
     }
 
-    pub fn load_weights(&self) {
-        println!("Hello YoYolops, you didn't implemented this one yet :)");
+    fn get_params(&self) -> [&[f64]; 6] {
+        [
+            self.weights_matrix_01.as_slice(),
+            self.weights_matrix_12.as_slice(),
+            self.weights_matrix_23.as_slice(),
+            self.hidden_bias_0.as_slice(),
+            self.hidden_bias_1.as_slice(),
+            self.output_bias.as_slice(),
+        ]
     }
 
-    pub fn save_weights(&self) {
-        println!("Unfortunately you also did not implement this one yet")
+    fn get_params_mut(&mut self) -> [&mut [f64]; 6] {
+        [
+            self.weights_matrix_01.as_mut_slice(),
+            self.weights_matrix_12.as_mut_slice(),
+            self.weights_matrix_23.as_mut_slice(),
+            self.hidden_bias_0.as_mut_slice(),
+            self.hidden_bias_1.as_mut_slice(),
+            self.output_bias.as_mut_slice(),
+        ]
     }
+
+    pub fn save_weights(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        for param in self.get_params() {
+            let bytes: &[u8] = cast_slice(param); // Converte &[f64] para &[u8]
+            file.write_all(bytes)?;
+        }
+
+        Ok(())
+    }
+
+    /// Carrega os pesos e biases de um arquivo binário
+    pub fn load_weights(&mut self, path: &str) -> Result<()> {
+        let mut file = File::open(path)?;
+
+        for param in self.get_params_mut() {
+            let bytes: &mut [u8] = cast_slice_mut(param); // Converte &mut [f64] para &mut [u8]
+            file.read_exact(bytes)?;
+        }
+
+        Ok(())
+    }
+
 
 }

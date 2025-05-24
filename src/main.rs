@@ -3,19 +3,26 @@ mod static_mlp;
 mod constants;
 mod utils;
 
-use utils::io::MNISTReader;
+use utils::io::{
+    MNISTReader,
+    InputHandler,
+    render_mnist_image,
+    render_mlp_output
+};
 use std::path::Path;
 
 use crate::utils::parsers;
 use crate::dynamic_mlp::DMLP;
 use crate::static_mlp::SMLP;
-
-const BATCH_SIZE: usize = 32;
-const EPOCHS: usize = 10;
-const LEARNING_RATE: f64 = 0.01;
-
-const TRAINING_IMAGES_PATH: &str = "./training_data/train-images.idx3-ubyte";
-const TRAINING_LABELS_PATH: &str = "./training_data/train-labels.idx1-ubyte";
+use crate::constants::{
+    BATCH_SIZE,
+    EPOCHS,
+    LEARNING_RATE,
+    TRAINING_IMAGES_PATH,
+    TRAINING_LABELS_PATH,
+    SMLP_WEIGHTS_PATH,
+    INPUT_FOLDER_PATH
+};
 
 fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
     let layer_sizes = vec![784, 16, 16, 10];
@@ -74,8 +81,8 @@ fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
-    let mut mlp = SMLP::new();
-    mlp.randomize_weights();
+    let mut smlp = SMLP::new();
+    smlp.randomize_weights();
 
     for epoch in 1..=EPOCHS {
         let train_mnist = MNISTReader::new(
@@ -95,7 +102,7 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
             labels_batch.push(label);
 
             if images_batch.len() == BATCH_SIZE {
-                let predictions = mlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
+                let predictions = smlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
 
                 for (pred, &actual_label) in predictions.iter().zip(&labels_batch) {
                     if pred.argmax().0 == actual_label as usize {
@@ -111,7 +118,7 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
 
         // Handle leftovers
         if !images_batch.is_empty() {
-            let predictions = mlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
+            let predictions = smlp.train_cross_entropy_batch(&images_batch, &labels_batch, LEARNING_RATE);
             for (pred, &actual_label) in predictions.iter().zip(&labels_batch) {
                 if pred.argmax().0 == actual_label as usize {
                     correct += 1;
@@ -123,13 +130,35 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
         let accuracy = (correct as f64) / (total as f64) * 100.0;
         println!("Epoch {epoch} Accuracy: {:.2}%", accuracy);
     }
+    println!("Saving weights in {}", SMLP_WEIGHTS_PATH);
+    smlp.save_weights(SMLP_WEIGHTS_PATH)?;
 
     Ok(())
 }
 
+/* fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut smlp: SMLP = SMLP::new();
+    let input_handler = InputHandler::new(INPUT_FOLDER_PATH)?;
+
+    smlp.load_weights(SMLP_WEIGHTS_PATH)?;
+    smlp.show_weights();
+
+    for image_result in input_handler {
+        match image_result {
+            Ok(image) => {
+                render_mnist_image(&image, 'p');
+                let normalized_image = parsers::normalize_image(image);
+                let prediction = smlp.predict(normalized_image);
+                render_mlp_output(&prediction);
+            },
+            Err(e) => eprintln!("Erro ao carregar imagem: {}", e),
+        }
+    }
+
+    Ok(())
+} */
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("HEY THERE");
     train_static_mlp()?;
-    //train_dynamic_mlp()?;
     Ok(())
 }

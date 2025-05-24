@@ -3,7 +3,6 @@ use std::io::{self, BufReader, Read};
 use std::vec::IntoIter;
 use nalgebra::SVector;
 use std::path::{Path, PathBuf};
-use image::{GenericImageView, GrayImage, Luma};
 
 use crate::constants::{INPUT_SIZE, OUTPUT_SIZE, LABEL_SIZE};
 
@@ -128,7 +127,6 @@ pub fn render_mlp_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
 }
 
 pub fn png_to_mnist<P: AsRef<Path>>(path: P) -> Result<[u8; INPUT_SIZE], Box<dyn std::error::Error>> {
-    // Convert to grayscale
     let img = image::open(path)?.to_luma8();
 
     if img.width() != 28 || img.height() != 28 {
