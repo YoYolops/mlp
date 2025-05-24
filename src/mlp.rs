@@ -81,7 +81,6 @@ impl MLP {
         }
     }
 
-
     fn apply_relu<const N: usize>(layer: &mut SVector<f64, N>) {
         for val in layer.iter_mut() {
             *val = val.max(0.0);
@@ -109,10 +108,7 @@ impl MLP {
         MLP::softmax(&self.output_layer)
     }
 
-
     pub fn load_weights(&self) {
         println!("Hello YoYolops, you didn't implemented this one yet :)");
     }
-
-
 }

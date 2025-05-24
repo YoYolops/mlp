@@ -254,3 +254,80 @@ The correct answer was 8 :(
  I recommend [reading this medium article](https://pub.towardsai.net/why-perceptron-neurons-need-bias-input-2144633bcad4) as a starting point. Maybe it fires your curiosity as it did to mine.
 
  Since the goal here was never to get deep into the theory (this is a development diary), i won't discuss the ins n' outs of biases' effects over MLPs, even because i can barely glimpse it. In pratical terms, we'll need to add one more vector in each layer to be summed with the `weights*input` activation value.
+
+ Our struct changed a lot since the last time, so its good to have a look again:
+
+ ```rust
+ pub struct MLP {
+    input_layer: SVector<f64, INPUT_SIZE>,              // 784 x 1
+    hidden_layer_0: SVector<f64, HIDDEN_SIZE>,          // 16 x 1
+    hidden_layer_1: SVector<f64, HIDDEN_SIZE>,          // 16 x 1
+    output_layer: SVector<f64, OUTPUT_SIZE>,            // 10 x 1
+    weights_matrix_01: SMatrix<f64, HIDDEN_SIZE, INPUT_SIZE>, // 16 x 784
+    weights_matrix_12: SMatrix<f64, HIDDEN_SIZE, HIDDEN_SIZE>, // 16 x 16
+    weights_matrix_23: SMatrix<f64, OUTPUT_SIZE, HIDDEN_SIZE>, //   // 10 x 16
+    hidden_bias_0: SVector<f64, HIDDEN_SIZE>,
+    hidden_bias_1: SVector<f64, HIDDEN_SIZE>,
+    output_bias: SVector<f64, OUTPUT_SIZE>,
+}
+ ```
+
+### Last steps
+We need to better structure the function responsible for reading the images. Right know, it just iter over the entire dataset, printing the images in stdout and returning the last one read. This function will have to provide an image at a time. We are going to create a struct, implementing the trait Iterator, so we can loop over the images and labels at once:
+
+```rust
+pub struct MNISTReader {
+    image_reader: BufReader<File>,
+    label_reader: BufReader<File>,
+    index: usize,
+    total: usize,
+}
+
+impl MNISTReader {
+    pub fn new(image_path: &Path, label_path: &Path) -> io::Result<Self> {
+        let mut image_file = BufReader::new(File::open(image_path)?);
+        let mut label_file = BufReader::new(File::open(label_path)?);
+
+        // Skiping the headers
+        let mut image_header = [0u8; 16];
+        let mut label_header = [0u8; 8];
+        image_file.read_exact(&mut image_header)?;
+        label_file.read_exact(&mut label_header)?;
+
+        let total = u32::from_be_bytes([image_header[4], image_header[5], image_header[6], image_header[7]]) as usize;
+
+        Ok(
+            Self {
+                image_reader: image_file,
+                label_reader: label_file,
+                index: 0,
+                total,
+            }
+        )
+    }
+}
+
+impl Iterator for MNISTReader {
+    type Item = io::Result<([u8; 784], u8)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.total {
+            return None;
+        }
+
+        let mut image = [0u8; 784];
+        let mut label = [0u8; 1];
+
+        if let Err(e) = self.image_reader.read_exact(&mut image) {
+            return Some(Err(e));
+        }
+
+        if let Err(e) = self.label_reader.read_exact(&mut label) {
+            return Some(Err(e));
+        }
+
+        self.index += 1;
+        Some(Ok((image, label[0])))
+    }
+}
+```

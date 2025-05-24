@@ -1,42 +1,66 @@
 use std::fs::File;
 use std::io::{self, BufReader, Read};
 use nalgebra::SVector;
+use std::path::Path;
 
 use crate::constants::{INPUT_SIZE, OUTPUT_SIZE};
 
-pub fn read_image() -> io::Result<[u8; INPUT_SIZE]> {
-    let file = File::open("./data/train-images.idx3-ubyte")?;
-    let mut reader = BufReader::new(file);
-
-    let magic = read_u32_big_endian(&mut reader)?;
-    if magic != 2051 {
-        panic!("Invalid magic number: {}", magic);
-    }
-
-    let num_images = read_u32_big_endian(&mut reader)?;
-    let num_rows = read_u32_big_endian(&mut reader)?;
-    let num_cols = read_u32_big_endian(&mut reader)?;
-
-    println!("Images: {}, Size: {}x{}", num_images, num_rows, num_cols);
-
-    let mut image = [0u8; INPUT_SIZE];
-    for i in 0..num_images {
-        println!("Reading image: {}", i+1);
-        reader.read_exact(&mut image)?;
-        render_image(&image, 'p');
-    }
-
-    Ok(image)
+pub struct MNISTReader {
+    image_reader: BufReader<File>,
+    label_reader: BufReader<File>,
+    index: usize,
+    total: usize,
 }
 
-// Helper to read a u32 in big-endian format
-fn read_u32_big_endian(reader: &mut impl Read) -> io::Result<u32> {
-    let mut buf = [0u8; 4];
-    reader.read_exact(&mut buf)?;
-    Ok(u32::from_be_bytes(buf))
+impl MNISTReader {
+    pub fn new(image_path: &Path, label_path: &Path) -> io::Result<Self> {
+        let mut image_file = BufReader::new(File::open(image_path)?);
+        let mut label_file = BufReader::new(File::open(label_path)?);
+
+        // Skiping the headers
+        let mut image_header = [0u8; 16];
+        let mut label_header = [0u8; 8];
+        image_file.read_exact(&mut image_header)?;
+        label_file.read_exact(&mut label_header)?;
+
+        let total = u32::from_be_bytes([image_header[4], image_header[5], image_header[6], image_header[7]]) as usize;
+
+        Ok(
+            Self {
+                image_reader: image_file,
+                label_reader: label_file,
+                index: 0,
+                total,
+            }
+        )
+    }
 }
 
-fn render_image(image: &[u8], mode: char) {
+impl Iterator for MNISTReader {
+    type Item = io::Result<([u8; INPUT_SIZE], u8)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.total {
+            return None;
+        }
+
+        let mut image = [0u8; INPUT_SIZE];
+        let mut label = [0u8; 1];
+
+        if let Err(e) = self.image_reader.read_exact(&mut image) {
+            return Some(Err(e));
+        }
+
+        if let Err(e) = self.label_reader.read_exact(&mut label) {
+            return Some(Err(e));
+        }
+
+        self.index += 1;
+        Some(Ok((image, label[0])))
+    }
+}
+
+pub fn render_mnist_image(image: &[u8], mode: char) {
     const WIDTH: usize = 28;
     const HEIGHT: usize = 28;
     const GREYSCALE: [char; 5] = ['█', '▓', '▒', '░', ' ']; // dark to light
@@ -58,7 +82,7 @@ fn render_image(image: &[u8], mode: char) {
     }
 }
 
-pub fn render_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
+pub fn render_mlp_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
     const MAX_BAR_LENGTH: u32= 100; // Maximum number of '█' characters per bar
 
     for (i, val) in output_array.iter().enumerate() {
