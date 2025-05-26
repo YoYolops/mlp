@@ -1,12 +1,12 @@
 // Static mlp (SMLP) structure
 pub const INPUT_SIZE: usize = 784;
-pub const HIDDEN_SIZE_0: usize = 16;
-pub const HIDDEN_SIZE_1: usize = 16;
+pub const HIDDEN_SIZE_0: usize = 196;
+pub const HIDDEN_SIZE_1: usize = 49;
 pub const OUTPUT_SIZE: usize = 10;
 pub const LABEL_SIZE: usize = 1;
 
 // Training params
-pub const BATCH_SIZE: usize = 64;
+pub const BATCH_SIZE: usize = 32;
 pub const EPOCHS: usize = 20;
 pub const LEARNING_RATE: f64 = 0.01;
 

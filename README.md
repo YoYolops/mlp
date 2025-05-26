@@ -422,3 +422,19 @@ pub const BATCH_SIZE: usize = 64;
 pub const EPOCHS: usize = 20;
 pub const LEARNING_RATE: f64 = 0.01;
 ```
+
+This did not have the expected outcome. In our second try, we tried shuffling the training data to prevent biases and altered the amount of neurons in each layer, so now our perceptron has the following parameters:
+
+```rust
+// Static mlp (SMLP) structure
+pub const INPUT_SIZE: usize = 784;
+pub const HIDDEN_SIZE_0: usize = 196;
+pub const HIDDEN_SIZE_1: usize = 49;
+pub const OUTPUT_SIZE: usize = 10;
+pub const LABEL_SIZE: usize = 1;
+
+// Training params
+pub const BATCH_SIZE: usize = 32;
+pub const EPOCHS: usize = 20;
+pub const LEARNING_RATE: f64 = 0.01;
+```
