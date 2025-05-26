@@ -29,22 +29,14 @@ use crate::constants::{
 };
 
 fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
-    let layer_sizes = vec![784, 16, 16, 10];
+    let layer_sizes = vec![784, 196, 49, 16, 10];
     // Weights randomization is done in NEW for the dynamic MLP
-    let mut dmlp = DMLP::new(layer_sizes.clone()); // Pass layer_sizes by value or clone if needed later
-    println!("Dynamic MLP Layers:"); // Changed from dmlp.show_layers() to avoid assuming it prints
-    print!("[");
-    for (i, &size) in layer_sizes.iter().enumerate() {
-        print!("{}", size);
-        if i < layer_sizes.len() - 1 {
-            print!(", ");
-        }
-    }
-    println!("]");
+    let mut dmlp = DMLP::new(layer_sizes);
+    println!("Dynamic MLP Layers:");
+    dmlp.show_layers();
 
 
     for epoch in 1..=EPOCHS {
-        // 1. Load and Prepare Full Dataset for the current epoch
         let train_mnist_reader = MNISTReader::new(
             Path::new(TRAINING_IMAGES_PATH),
             Path::new(TRAINING_LABELS_PATH),
@@ -52,8 +44,8 @@ fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut dataset: Vec<(Vec<f64>, u8)> = train_mnist_reader
             .map(|result| {
-                let (image_raw, label) = result?; // Assuming MNISTReader yields Result<(RawImage, u8)>
-                let normalized_image_array = parsers::normalize_image(image_raw); // Assuming this returns [f64; 784]
+                let (image_raw, label) = result?;
+                let normalized_image_array = parsers::normalize_image(image_raw);
                 Ok::<_, Box<dyn std::error::Error>>((
                     normalized_image_array.to_vec(), // Convert [f64; 784] to Vec<f64>
                     label,
@@ -61,22 +53,21 @@ fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
             })
             .collect::<Result<Vec<(Vec<f64>, u8)>, _>>()?;
 
-        // 2. Shuffle Dataset
+        // Shuffle Dataset
         let mut rng = rand::rng();
         dataset.shuffle(&mut rng);
 
-        let mut epoch_correct = 0;
-        let mut epoch_total = 0;
+        let mut correct = 0;
+        let mut total = 0;
 
-        // 3. Process in Batches
+        // Batches
         for chunk in dataset.chunks(BATCH_SIZE) {
-            // 4. Adapt Batch Creation
             // .cloned() is used because chunk elements are &(Vec<f64>, u8)
             // and we need owned Vec<f64> and u8 for the new vectors.
             let (images_batch, labels_batch): (Vec<Vec<f64>>, Vec<u8>) = 
                 chunk.iter().cloned().unzip();
 
-            if images_batch.is_empty() { // Should not happen if dataset is not empty
+            if images_batch.is_empty() {
                 continue;
             }
 
@@ -87,27 +78,26 @@ fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
                 LEARNING_RATE
             );
 
-            // Calculate accuracy for this batch (optional, or accumulate for epoch accuracy)
+            // Calculate accuracy for this batch
             for (pred, &actual_label) in predictions.iter().zip(&labels_batch) {
                 if pred.argmax().0 == actual_label as usize {
-                    epoch_correct += 1;
+                    correct += 1;
                 }
-                epoch_total += 1;
+                total += 1;
             }
         } // End of batch processing loop
 
-        let accuracy = if epoch_total > 0 {
-            (epoch_correct as f64) / (epoch_total as f64) * 100.0
+        let accuracy = if total > 0 {
+            (correct as f64) / (total as f64) * 100.0
         } else {
             0.0 // Avoid division by zero if dataset was empty
         };
-        println!("Epoch {epoch:02} Accuracy: {:.2}% (Correct: {}, Total: {})", accuracy, epoch_correct, epoch_total);
+        println!("Epoch {epoch:02} Accuracy: {:.2}%", accuracy);
     } // End of epoch loop
 
-    // Optionally save weights for DMLP if you have a path defined
     println!("Saving dynamic MLP weights...");
-    dmlp.save_weights(DMLP_WEIGHTS_PATH)?; // Assuming DMLP_WEIGHTS_PATH is defined
-
+    dmlp.save_weights(DMLP_WEIGHTS_PATH)?;
+    
     Ok(())
 }
 
@@ -156,7 +146,7 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/* fn run() -> Result<(), Box<dyn std::error::Error>> {
+fn test_smlp_againt_input() -> Result<(), Box<dyn std::error::Error>> {
     let mut smlp: SMLP = SMLP::new();
     let input_handler = InputHandler::new(INPUT_FOLDER_PATH)?;
 
@@ -176,10 +166,10 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-} */
+}
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    train_static_mlp()?;
+    train_dynamic_mlp()?;
     Ok(())
 }
 

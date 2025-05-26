@@ -1,4 +1,3 @@
-use rand::rng;
 use rand_distr::{Distribution, Normal};
 use nalgebra::{DMatrix, DVector};
 use std::fs::File;
@@ -13,7 +12,7 @@ pub struct DMLP {
 
 impl DMLP {
     pub fn new(layers: Vec<usize>) -> Self {
-        let mut rng = rand::rng(); // Using thread_rng for convenience
+        let mut rng = rand::rng();
         let mut weights = Vec::new();
         let mut biases = Vec::new();
         let mut activations = Vec::new();
@@ -164,29 +163,29 @@ impl DMLP {
         println!("]");
     }
 
-    /// Saves the DMLP's layers, weights, and biases to a binary file.
-    /// All numeric data (layer info as u32, weights/biases as f64) is stored in little-endian format.
+    // Saves the DMLP's layers, weights, and biases to a binary file.
     pub fn save_weights(&self, path: &str) -> IoResult<()> {
         let mut file = File::create(path)?;
 
-        // 1. Save number of layers (as u32 little-endian)
+        // Save metadata:
+        // number of layers
         let num_layers_u32 = self.layers.len() as u32;
         file.write_all(&num_layers_u32.to_le_bytes())?;
 
-        // 2. Save each layer size (as u32 little-endian)
+        // Layers sizes
         for &size in &self.layers {
             let size_u32 = size as u32;
             file.write_all(&size_u32.to_le_bytes())?;
         }
 
-        // 3. Save weight matrices (each f64 as 8 little-endian bytes)
+        // Weight Matrices
         for matrix in &self.weights {
             for &float_val in matrix.as_slice().iter() {
                 file.write_all(&float_val.to_le_bytes())?;
             }
         }
 
-        // 4. Save bias vectors (each f64 as 8 little-endian bytes)
+        // Biases
         for vector in &self.biases {
             for &float_val in vector.as_slice().iter() {
                 file.write_all(&float_val.to_le_bytes())?;
@@ -195,19 +194,18 @@ impl DMLP {
         Ok(())
     }
 
-    /// Loads the DMLP's layers, weights, and biases from a binary file.
-    /// Assumes all numeric data is stored in little-endian format.
-    /// This will reconfigure the current DMLP instance.
+    // Loads the DMLP's layers, weights, and biases from a binary file.
+    // This will reconfigure the current DMLP instance.
     pub fn load_weights(&mut self, path: &str) -> IoResult<()> {
         let mut file = File::open(path)?;
-        let mut u32_buf = [0u8; 4]; // Buffer for reading u32
-        let mut f64_buf = [0u8; 8]; // Buffer for reading f64
+        let mut u32_buf = [0u8; 4];
+        let mut f64_buf = [0u8; 8];
 
-        // 1. Read number of layers
+        // Read number of layers
         file.read_exact(&mut u32_buf)?;
         let num_defined_layers = u32::from_le_bytes(u32_buf) as usize;
 
-        // 2. Read each layer size
+        // Read layers sizes
         let mut loaded_layers_vec = Vec::with_capacity(num_defined_layers);
         for _ in 0..num_defined_layers {
             file.read_exact(&mut u32_buf)?;
@@ -219,7 +217,7 @@ impl DMLP {
         self.weights.clear();
         self.biases.clear();
 
-        // 3. Load weight matrices (each f64 from 8 little-endian bytes)
+        // Load weight matrices
         if self.layers.len() >= 2 {
             for i in 0..(self.layers.len() - 1) {
                 let rows = self.layers[i + 1];
@@ -235,7 +233,7 @@ impl DMLP {
             }
         }
 
-        // 4. Load bias vectors (each f64 from 8 little-endian bytes)
+        // Load bias vectors
         if self.layers.len() >= 2 {
             for i in 0..(self.layers.len() - 1) {
                 let size = self.layers[i + 1]; // Bias vector corresponds to the output neurons of the layer
