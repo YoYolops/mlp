@@ -115,7 +115,7 @@ pub fn render_mnist_image(image: &[u8], mode: char) {
 }
 
 pub fn render_mlp_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
-    const MAX_BAR_LENGTH: u32= 80; // Maximum number of '█' characters per bar
+    const MAX_BAR_LENGTH: u32= 50; // Maximum number of '█' characters per bar
 
     for (i, val) in output_array.iter().enumerate() {
         let clamped = val.clamp(0.0, 1.0);

@@ -128,7 +128,7 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn run() -> Result<(), Box<dyn std::error::Error>> {
+/* fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut smlp: SMLP = SMLP::new();
     let input_handler = InputHandler::new(INPUT_FOLDER_PATH)?;
 
@@ -148,12 +148,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
+} */
 
-/* fn run() -> Result<(), Box<dyn std::error::Error>> {
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     train_static_mlp()?;
     Ok(())
-} */
+}
 
 fn main() {
     thread::Builder::new()
