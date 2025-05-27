@@ -3,6 +3,8 @@ use nalgebra::{DMatrix, DVector};
 use std::fs::File;
 use std::io::{Read, Write, Result as IoResult};
 
+use crate::constants::{INPUT_SIZE};
+
 pub struct DMLP {
     layers: Vec<usize>,
     activations: Vec<DVector<f64>>,
@@ -39,21 +41,25 @@ impl DMLP {
         DMLP { layers, weights, biases, activations }
     }
 
-    pub fn predict(&mut self, input: &[f64]) -> DVector<f64> {
-        if self.layers.is_empty() || self.activations.is_empty() {
-            return DVector::from_vec(vec![]);
+    pub fn predict(&mut self, input: [f64; INPUT_SIZE]) -> DVector<f64> {
+        if INPUT_SIZE != self.layers[0] {
+            panic!(
+                "DMLP configuration mismatch: 'predict' function compiled for INPUT_SIZE {} but DMLP instance is configured for input layer size {}.",
+                INPUT_SIZE, self.layers[0]
+            );
         }
-        if input.len() != self.layers[0] {
-            panic!("Input dimension mismatch. Expected {}, got {}", self.layers[0], input.len());
-        }
-
-        self.activations[0] = DVector::from_row_slice(input);
+        
+        self.activations[0] = DVector::from_row_slice(&input);
 
         if self.weights.is_empty() {
              return self.activations[0].clone();
         }
 
         for i in 0..self.weights.len() {
+            if (i + 1) >= self.activations.len() {
+                panic!("DMLP internal inconsistency: insufficient activation vectors for layers/weights.");
+            }
+
             let z = &self.weights[i] * &self.activations[i] + &self.biases[i];
             self.activations[i + 1] = if i == self.weights.len() - 1 {
                 DMLP::softmax(&z)
@@ -61,8 +67,10 @@ impl DMLP {
                 DMLP::relu(&z)
             };
         }
-        self.activations.last().unwrap().clone()
+
+        self.activations.last().expect("Activations vector should not be empty here").clone()
     }
+
 
     pub fn train_cross_entropy_batch(
         &mut self,
@@ -85,8 +93,19 @@ impl DMLP {
         let mut grad_b_accum: Vec<DVector<f64>> = self.biases.iter()
             .map(|b| DVector::zeros(b.len())).collect();
 
-        for (x, &label) in images.iter().zip(labels.iter()) {
-            let y_hat = self.predict(x);
+        for (x_vec, &label) in images.iter().zip(labels.iter()) { // x_vec is &Vec<f64>
+            if x_vec.len() != INPUT_SIZE {
+                panic!(
+                    "Training data item size mismatch. Expected data items of size {} (INPUT_SIZE), but received an item of size {}.",
+                    INPUT_SIZE,
+                    x_vec.len()
+                );
+            }
+            
+            let mut image_array = [0.0f64; INPUT_SIZE]; // Create a fixed-size array
+            image_array.copy_from_slice(x_vec.as_slice()); // Copy data from the Vec's slice
+
+            let y_hat = self.predict(image_array); // Call predict with the array (passed by value)
             predictions.push(y_hat.clone());
 
             let mut target = DVector::from_element(self.layers.last().unwrap_or(&0).clone(), 0.0);
@@ -163,29 +182,19 @@ impl DMLP {
         println!("]");
     }
 
-    // Saves the DMLP's layers, weights, and biases to a binary file.
     pub fn save_weights(&self, path: &str) -> IoResult<()> {
         let mut file = File::create(path)?;
-
-        // Save metadata:
-        // number of layers
         let num_layers_u32 = self.layers.len() as u32;
         file.write_all(&num_layers_u32.to_le_bytes())?;
-
-        // Layers sizes
         for &size in &self.layers {
             let size_u32 = size as u32;
             file.write_all(&size_u32.to_le_bytes())?;
         }
-
-        // Weight Matrices
         for matrix in &self.weights {
             for &float_val in matrix.as_slice().iter() {
                 file.write_all(&float_val.to_le_bytes())?;
             }
         }
-
-        // Biases
         for vector in &self.biases {
             for &float_val in vector.as_slice().iter() {
                 file.write_all(&float_val.to_le_bytes())?;
@@ -194,18 +203,14 @@ impl DMLP {
         Ok(())
     }
 
-    // Loads the DMLP's layers, weights, and biases from a binary file.
-    // This will reconfigure the current DMLP instance.
     pub fn load_weights(&mut self, path: &str) -> IoResult<()> {
         let mut file = File::open(path)?;
         let mut u32_buf = [0u8; 4];
         let mut f64_buf = [0u8; 8];
 
-        // Read number of layers
         file.read_exact(&mut u32_buf)?;
         let num_defined_layers = u32::from_le_bytes(u32_buf) as usize;
 
-        // Read layers sizes
         let mut loaded_layers_vec = Vec::with_capacity(num_defined_layers);
         for _ in 0..num_defined_layers {
             file.read_exact(&mut u32_buf)?;
@@ -217,13 +222,12 @@ impl DMLP {
         self.weights.clear();
         self.biases.clear();
 
-        // Load weight matrices
         if self.layers.len() >= 2 {
             for i in 0..(self.layers.len() - 1) {
                 let rows = self.layers[i + 1];
                 let cols = self.layers[i];
                 let mut weight_matrix = DMatrix::<f64>::zeros(rows, cols);
-                if rows * cols > 0 { // Only read if there are elements
+                if rows * cols > 0 {
                     for val_ref in weight_matrix.as_mut_slice().iter_mut() {
                         file.read_exact(&mut f64_buf)?;
                         *val_ref = f64::from_le_bytes(f64_buf);
@@ -233,12 +237,11 @@ impl DMLP {
             }
         }
 
-        // Load bias vectors
         if self.layers.len() >= 2 {
             for i in 0..(self.layers.len() - 1) {
-                let size = self.layers[i + 1]; // Bias vector corresponds to the output neurons of the layer
+                let size = self.layers[i + 1];
                 let mut bias_vector = DVector::<f64>::zeros(size);
-                if size > 0 { // Only read if there are elements
+                if size > 0 {
                     for val_ref in bias_vector.as_mut_slice().iter_mut() {
                         file.read_exact(&mut f64_buf)?;
                         *val_ref = f64::from_le_bytes(f64_buf);
@@ -248,11 +251,23 @@ impl DMLP {
             }
         }
 
-        // Re-initialize activations based on new layer structure
         self.activations.clear();
         for &layer_size in &self.layers {
             self.activations.push(DVector::from_element(layer_size, 0.0));
         }
         Ok(())
+    }
+
+    pub fn render_output(&self, output_vector: &DVector<f64>) {
+        const MAX_BAR_LENGTH: u32 = 50; // Maximum number of '█' characters per bar
+    
+        for (i, val) in output_vector.iter().enumerate() {
+            let bar_len = (val * MAX_BAR_LENGTH as f64).round() as usize;
+            let bar = "█".repeat(bar_len);
+            println!("{:>2} | {:<width$} | {:.4}", i, bar, val, width = MAX_BAR_LENGTH as usize);
+        }
+        println!();
+        println!("===========================================================");
+        println!();
     }
 }

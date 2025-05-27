@@ -10,7 +10,7 @@ use utils::io::{
     render_mlp_output
 };
 use std::path::Path;
-use std::thread;
+use std::{thread, vec};
 use rand::seq::SliceRandom;
 
 use crate::utils::parsers;
@@ -26,18 +26,18 @@ use crate::constants::{
     SMLP_WEIGHTS_PATH,
     DMLP_WEIGHTS_PATH,
     INPUT_FOLDER_PATH,
+    DMLP_LAYERS
 };
 
 fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
-    let layer_sizes = vec![784, 196, 49, 16, 10];
+    let layer_sizes = Vec::from(DMLP_LAYERS);
     // Weights randomization is done in NEW for the dynamic MLP
     let mut dmlp = DMLP::new(layer_sizes);
     println!("Dynamic MLP Layers:");
     dmlp.show_layers();
 
-
     for epoch in 1..=EPOCHS {
-        let train_mnist_reader = MNISTReader::new(
+        let train_mnist_reader: MNISTReader = MNISTReader::new(
             Path::new(TRAINING_IMAGES_PATH),
             Path::new(TRAINING_LABELS_PATH),
         )?;
@@ -95,9 +95,9 @@ fn train_dynamic_mlp() -> Result<(), Box<dyn std::error::Error>> {
         println!("Epoch {epoch:02} Accuracy: {:.2}%", accuracy);
     } // End of epoch loop
 
-    println!("Saving dynamic MLP weights...");
+    println!("Saving DMLP weights in {}", DMLP_WEIGHTS_PATH);
     dmlp.save_weights(DMLP_WEIGHTS_PATH)?;
-    
+
     Ok(())
 }
 
@@ -140,7 +140,7 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
         let accuracy = (correct as f64) / (total as f64) * 100.0;
         println!("Epoch {epoch:02} Accuracy: {:.2}%", accuracy);
     }
-    println!("Saving weights in {}", SMLP_WEIGHTS_PATH);
+    println!("Saving SMLP weights in {}", SMLP_WEIGHTS_PATH);
     smlp.save_weights(SMLP_WEIGHTS_PATH)?;
 
     Ok(())
@@ -148,10 +148,11 @@ fn train_static_mlp() -> Result<(), Box<dyn std::error::Error>> {
 
 fn test_smlp_againt_input() -> Result<(), Box<dyn std::error::Error>> {
     let mut smlp: SMLP = SMLP::new();
-    let input_handler = InputHandler::new(INPUT_FOLDER_PATH)?;
-
     smlp.load_weights(SMLP_WEIGHTS_PATH)?;
     smlp.show_weights();
+    
+    let input_handler = InputHandler::new(INPUT_FOLDER_PATH)?;
+
 
     for image_result in input_handler {
         match image_result {
@@ -159,7 +160,7 @@ fn test_smlp_againt_input() -> Result<(), Box<dyn std::error::Error>> {
                 render_mnist_image(&image, 'p');
                 let normalized_image = parsers::normalize_image(image);
                 let prediction = smlp.predict(normalized_image);
-                render_mlp_output(&prediction);
+                smlp.render_output(&prediction);
             },
             Err(e) => eprintln!("Erro ao carregar imagem: {}", e),
         }
@@ -168,14 +169,50 @@ fn test_smlp_againt_input() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn test_dmlp_againt_input() -> Result<(), Box<dyn std::error::Error>> {
+    let mut dmlp = DMLP::new(Vec::from(DMLP_LAYERS));
+
+    println!("Loading DMLP weights from: {}", DMLP_WEIGHTS_PATH);
+    dmlp.load_weights(DMLP_WEIGHTS_PATH)?;
+
+    println!("DMLP Layers Structure:");
+    dmlp.show_layers();
+
+    println!("\nInitializing Input Handler for folder: {}", INPUT_FOLDER_PATH);
+    let input_handler = InputHandler::new(Path::new(INPUT_FOLDER_PATH))?;
+
+    println!("\nProcessing images from input folder...");
+    for image_result in input_handler {
+        match image_result {
+            Ok(image_data) => { // Assuming image_data is the raw image type
+                render_mnist_image(&image_data, 'p'); // Render the input image
+
+                // parsers::normalize_image should return [f64; INPUT_SIZE]
+                let normalized_image_array = parsers::normalize_image(image_data);
+
+                // DMLP::predict takes [f64; INPUT_SIZE] by value
+                let prediction_dvector = dmlp.predict(normalized_image_array);
+
+                // Call the DMLP's own render method
+                dmlp.render_output(&prediction_dvector);
+            }
+            Err(e) => {
+                eprintln!("Error loading or processing image: {}", e);
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    train_dynamic_mlp()?;
+    test_dmlp_againt_input()?;
     Ok(())
 }
 
 fn main() {
     thread::Builder::new()
-        .stack_size(16 * 1024 * 1024 * 2) // 32 MB
+        .stack_size(16 * 1024 * 1024 * 2) // 32 MB of stack allocated
         .spawn(|| {
             if let Err(e) = run() {
                 eprintln!("Error: {e}");

@@ -1,3 +1,6 @@
+// Fynamic mlp (DMLP) structure
+pub const DMLP_LAYERS: [usize; 5] = [784, 196, 49, 16, 10];
+
 // Static mlp (SMLP) structure
 pub const INPUT_SIZE: usize = 784;
 pub const HIDDEN_SIZE_0: usize = 112;

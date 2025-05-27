@@ -398,8 +398,8 @@ We still have a few problems. First we need to add functions to store the weight
 We'll also need to come up with a way of creating new images equivalent to MNIST dataset, so i can show off to some of my friends by asking them to write some number and inputing it to our perceptron.
 
 ### Dynamic vs Static
-So i've built a dynamic version of our MLP. It makes use of nalgebra DVectors and DMatrixes, wich uses heap allocated vectors instead of stack allocated arrays.
-The result was expected but yet surprising to see, the same static MLP, with an identical amount of layers and neurons to the dynamic one, has around 15% better performance. Just by using Stack instead of Heap!!!
+I've built a dynamic version of our MLP. It makes use of nalgebra DVectors and DMatrixes, wich uses heap allocated vectors instead of stack allocated arrays.
+The result was expected but yet fun to see: the same static MLP, with an identical amount of layers and neurons to the dynamic one, has around 15% better performance. Just by using Stack instead of Heap!!!
 
 Of course we have a tradeoff, versatility vs performance. 
 
@@ -411,30 +411,31 @@ Note: We're using the SMLP (the static version). Cause it is faster and more tha
 To do so, we are going to increase the number of neurons on the hidden layers. Now, we'll have `[784, 64, 32, 10]` instead of the classic `[784, 16, 16, 10]`. 
 
 Also, have a look at our new training constants:
-```rust
-// Previous training constants:
-pub const BATCH_SIZE: usize = 32;
-pub const EPOCHS: usize = 10;
-pub const LEARNING_RATE: f64 = 0.01;
+| Parameter     | Old Configuration | New Configuration |
+|---------------|-------------------|-------------------|
+| `BATCH_SIZE`  | 32                | 64                |
+| `EPOCHS`      | 10                | 20                |
+| `LEARNING_RATE`| 0.01              | 0.01              |
 
-// New training constants:
-pub const BATCH_SIZE: usize = 64;
-pub const EPOCHS: usize = 20;
-pub const LEARNING_RATE: f64 = 0.01;
-```
+This did not have the expected outcome. In our second try, we tried shuffling the training data to prevent biases and altered the amount of neurons in each layer. The shuffling didn't seem to have had any impact over performance, but the idea was not improving performance with it, we were focusing in reducing the probability of training bias.
 
-This did not have the expected outcome. In our second try, we tried shuffling the training data to prevent biases and altered the amount of neurons in each layer, so now our perceptron has the following parameters:
+Changing the structure of our MLP actually gave us a little improvement. We also tried using the dynamic version of our network (with a dynamic number of layers, remember? DMLP) with one more layer so we could reduce its neurons at each layer by a factor of four, instead of by a factor of 7 chosen for our static mlp (SMLP):
 
-```rust
-// Static mlp (SMLP) structure
-pub const INPUT_SIZE: usize = 784;
-pub const HIDDEN_SIZE_0: usize = 196;
-pub const HIDDEN_SIZE_1: usize = 49;
-pub const OUTPUT_SIZE: usize = 10;
-pub const LABEL_SIZE: usize = 1;
+**Training Accuracy Comparison**
+Static MLP Layers:  `[784, 112, 16, 10]`
+Dynamic MLP Layers: `[784, 196, 49, 16, 10]`
 
-// Training params
-pub const BATCH_SIZE: usize = 32;
-pub const EPOCHS: usize = 20;
-pub const LEARNING_RATE: f64 = 0.01;
-```
+| Epoch | Dynamic MLP            | Static MLP                        |
+| :---- | :--------------------- | :-------------------------------- |
+| 01    | 81.67%                 | 78.71%                            |
+| 02    | 92.77%                 | 91.22%                            |
+| 03    | 94.38%                 | 93.04%                            |
+| 04    | 95.41%                 | 94.13%                            |
+| 05    | 96.16%                 | 94.84%                            |
+| 06    | 96.66%                 | 95.44%                            |
+| 07    | 97.08%                 | 95.82%                            |
+| 08    | 97.50%                 | 96.27%                            |
+| 09    | 97.71%                 | 96.59%                            |
+| 10    | 97.92%                 | 96.83%                            |
+
+\* we chose to reduce the epochs amount back to ten, since the performance gain wasn't significant

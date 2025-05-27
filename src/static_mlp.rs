@@ -260,4 +260,17 @@ impl SMLP {
 
         predictions
     }
+
+    pub fn render_output(&self, output_array: &SVector<f64, OUTPUT_SIZE>) {
+        const MAX_BAR_LENGTH: u32 = 50; // Maximum number of '█' characters per bar
+
+        for (i, val) in output_array.iter().enumerate() {
+            let bar_len = (val * MAX_BAR_LENGTH as f64).round() as usize;
+            let bar = "█".repeat(bar_len);
+            println!("{:>2} | {:<width$} | {:.4}", i, bar, val, width = MAX_BAR_LENGTH as usize);
+        }
+        println!();
+        println!("===========================================================");
+        println!();
+    }
 }
