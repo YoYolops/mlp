@@ -4,6 +4,11 @@ use std::vec::IntoIter;
 use nalgebra::SVector;
 use std::path::{Path, PathBuf};
 
+use image::ImageReader ;
+use std::process::Command;
+use image::{GrayImage, GenericImageView};
+use tempfile::NamedTempFile;
+
 use crate::constants::{INPUT_SIZE, OUTPUT_SIZE, LABEL_SIZE};
 
 pub struct InputHandler {
@@ -114,30 +119,38 @@ pub fn render_mnist_image(image: &[u8], mode: char) {
     }
 }
 
-pub fn render_mlp_output(output_array: &SVector<f64, OUTPUT_SIZE>) {
-    const MAX_BAR_LENGTH: u32= 50; // Maximum number of '█' characters per bar
-
-    for (i, val) in output_array.iter().enumerate() {
-        let clamped = val.clamp(0.0, 1.0);
-        let bar_len = (clamped * MAX_BAR_LENGTH as f64).round() as usize;
-        let bar = "█".repeat(bar_len);
-        println!("{:>2} | {}", i, bar);
-        println!();
-    }
-}
-
 pub fn png_to_mnist<P: AsRef<Path>>(path: P) -> Result<[u8; INPUT_SIZE], Box<dyn std::error::Error>> {
-    let img = image::open(path)?.to_luma8();
+    let input_path = path.as_ref();
 
-    if img.width() != 28 || img.height() != 28 {
-        return Err("Image must be 28x28 pixels".into());
+    // Create a temporary file path with a .png extension
+    let temp_output_file_base = NamedTempFile::new()?;
+    let mut temp_output_path: PathBuf = temp_output_file_base.path().to_path_buf();
+    temp_output_path.set_extension("png"); 
+    
+    let _temp_file_handle = temp_output_file_base;
+
+    // Builds the FFmpeg command
+    let status = Command::new("ffmpeg")
+        .arg("-i")
+        .arg(input_path)
+        .arg("-vf")
+        .arg("scale=28:28,format=gray") // Resize to 28x28 and convert to grayscale
+        .arg("-y") // Overwrite output file without asking
+        .arg(&temp_output_path) // Use the path with the extension
+        .status()?;
+
+    if !status.success() {
+        return Err(format!("FFmpeg command failed with exit code: {:?}", status.code()).into());
     }
+
+    // Open the processed image from the temporary file using the image crate
+    let img = ImageReader::open(&temp_output_path)?.decode()?.to_luma8();
 
     let mut data = [0u8; INPUT_SIZE];
-
     for (i, pixel) in img.pixels().enumerate() {
         data[i] = pixel[0];
     }
 
+    // The temporary file will be automatically deleted when _temp_file_handle goes out of scope.
     Ok(data)
 }

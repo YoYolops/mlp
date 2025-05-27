@@ -7,10 +7,9 @@ use utils::io::{
     MNISTReader,
     InputHandler,
     render_mnist_image,
-    render_mlp_output
 };
 use std::path::Path;
-use std::{thread, vec};
+use std::{thread};
 use rand::seq::SliceRandom;
 
 use crate::utils::parsers;
