@@ -12,10 +12,6 @@ This entire project will be mainly based on [three blue one brown's video series
 
 ### Step one: Get the data
 
-To my surprise, the MNIST dataset comes in an alien format. It appears to be provided as raw binary big-endian integers (?). I was expecting a folder with tons of 28x28 jpegs and this starts to bother me a little bit. How am i supposed to read this?
-
-After being in shock for a while, a did some research and it turns out the binary format of the MINIST dataset will make my job A LOT easier.
-
 ¯\\_(ツ)_/¯
 
 ### Reading The Data
